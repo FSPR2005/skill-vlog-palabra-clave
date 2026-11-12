@@ -80,7 +80,19 @@ siempre dan pico): las cifras son un piso.
 
 ## 8. Audio
 
-AUDIO_PENDIENTE
+- Voz casi continua: 132-200 palabras por minuto (mediana ~183) y voz presente el 63-89 % del tiempo. La primera
+  palabra está en el segundo 0.0 en los 6: no hay silencio ni logo de entrada.
+- Gancho hablado (0-3 s), siempre una de tres formas: una pregunta o un "si tú..." que interpela ("si tu sueño es...");
+  un contraste ("ves X, pero no ves Y"); o leer en voz alta el comentario de alguien y responderlo.
+- Cierre: una llamada a la acción corta y hablada: "aquí te dejo el link", "escríbeme tus dudas", una pregunta para los
+  comentarios ("¿cuál va más contigo?"), "parte dos" o un "adiós" sin más.
+- Fondo: en los huecos de la voz el nivel queda entre 0 y 8 dB por debajo de la voz (en los vlogs largos, casi igual):
+  hay una cama de sonido que no se apaga, música o ambiente. SUPUESTO que sea música en todos: la medida no distingue
+  música de ambiente, y la pista figura como "sonido original".
+- Efectos de sonido y si la música sigue el ritmo de los cortes: [NO MEDIDO] (no hay método fiable sin escuchar; no se
+  incluyen).
+- En la skill: voz normalizada a -14 LUFS (`audio.voz_lufs`), música del usuario a -24 dB (`audio.musica_db`) con
+  *ducking* (`sidechaincompress` umbral 0.03, razón 6, ataque 20 ms, liberación 350 ms) para que suba en los huecos.
 
 ## 9. Lo que no se replica
 

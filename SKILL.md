@@ -53,7 +53,8 @@ a la carpeta de `textos.json`. Todo es opcional: un `{}` deja solo cortes, subt�
 
 Reglas (salen de medir el estilo, ver `recetas/ESTILO.md`):
 
-- **Gancho, 0 a 3 s**: el texto está en pantalla desde el cuadro 0. Un título de 2 líneas que diga el tema: `chico` (2-3
+- **Gancho, 0 a 3 s**: el estilo habla desde el segundo 0 con una pregunta, un "si tú..." o un contraste ("ves X, pero
+  no ves Y"); si el crudo arranca con silencio, los cortes lo quitan. El texto está en pantalla desde el cuadro 0. Un título de 2 líneas que diga el tema: `chico` (2-3
   palabras de entrada, en caligráfica) + `grande` (2-3 palabras, el tema). Dura 1.5-3 s. Si la persona saluda, una `nota`
   a mano de 1 s ("hola :)") cerca de la cabeza. El primer corte cae antes de los 3 s (los scripts lo hacen si hay pausa).
 - **Claves**: UNA palabra cada 5-8 s, la que carga el sentido (sustantivo, número, adjetivo fuerte). Nunca muletillas,
@@ -64,7 +65,8 @@ Reglas (salen de medir el estilo, ver `recetas/ESTILO.md`):
 - **Posiciones**: la palabra va en el hueco SOBRE la cabeza (por omisión 30 % desde arriba:
   `subtitulos.palabra.posicion_y` en `estilo.json`). Si en un tramo la cabeza está
   más arriba o es un plano cerrado, agrega a `posiciones` `{"ini", "fin", "x": 0.5, "y": 0.85}` para moverla en ese tramo.
-- **Cierre**: en los últimos 2-3 s, una clave o una nota con la llamada a la acción que diga la persona (no la inventes).
+- **Cierre**: en los últimos 2-3 s, una clave o una nota con la llamada a la acción que diga la persona ("link",
+  "escríbeme", una pregunta para los comentarios, "parte dos"); no la inventes.
 
 ## 4. Vista previa, revisión y render
 
