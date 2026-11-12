@@ -150,3 +150,33 @@ def test_hdr_se_lleva_a_bt709():
     est = cargar_estilo(None)
     f = filtro_video(est, None, None, None, hdr=True)
     assert "tonemap" in f and f.index("tonemap") < f.index("crop=")
+
+
+@pytest.mark.skipif(not HAY_FFMPEG, reason="requiere ffmpeg")
+def test_toma_de_apoyo_relativa_a_la_carpeta_actual(tmp_path, monkeypatch):
+    from editar import main
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    crudo, apoyo = tmp_path / "crudo.mp4", clips / "apoyo.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=blue:size=180x320:rate=30:d=3",
+                    "-f", "lavfi", "-i", "sine=d=3", "-shortest", "-c:v", "libx264", "-preset", "ultrafast",
+                    str(crudo)], check=True)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=red:size=180x320:rate=30:d=2",
+                    "-c:v", "libx264", "-preset", "ultrafast", str(apoyo)], check=True)
+    otra = tmp_path / "otra"
+    otra.mkdir()
+    (otra / "textos.json").write_text(json.dumps({"apoyos": [{"archivo": "apoyo.mp4", "ini": 1, "fin": 2}]}),
+                                      encoding="utf-8")
+    (otra / "mini.json").write_text(json.dumps({"salida": {"ancho": 180, "alto": 320, "preset": "ultrafast"},
+                                                "color": {"activar": False}}), encoding="utf-8")
+    (otra / "p.json").write_text("[]", encoding="utf-8")
+    monkeypatch.chdir(clips)
+    assert main(["render", str(crudo), "--salida", str(tmp_path / "ed.mp4"), "--trabajo", str(tmp_path / "tr"),
+                 "--palabras", str(otra / "p.json"), "--estilo", str(otra / "mini.json"),
+                 "--textos", str(otra / "textos.json")]) == 0
+
+
+def test_fps_que_no_divide_48000_da_mensaje_claro():
+    from render import muestras_por_cuadro
+    with pytest.raises(ValueError, match="48000"):
+        muestras_por_cuadro(29.97)

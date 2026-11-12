@@ -9,7 +9,8 @@ import subprocess
 import tempfile
 
 
-def medir_color(video, muestras=8, desde=0.0, hasta=None):
+def medir_color(video, muestras=8, desde=0.0, hasta=None, vf_previo=None):
+    """vf_previo: filtro antes de medir (p. ej. el tonemap de un video HDR), para medir lo que se va a ver."""
     import numpy as np
     from PIL import Image
     if hasta is None:
@@ -22,7 +23,7 @@ def medir_color(video, muestras=8, desde=0.0, hasta=None):
         t = desde + (hasta - desde) * (i + 0.5) / muestras
         png = os.path.join(tmp, f"{i}.png")
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.3f}", "-i", video, "-frames:v", "1",
-                        "-vf", "scale=180:-2", png], check=False)
+                        "-vf", (vf_previo + "," if vf_previo else "") + "scale=180:-2", png], check=False)
         if not os.path.exists(png):
             continue
         im = Image.open(png).convert("RGB")

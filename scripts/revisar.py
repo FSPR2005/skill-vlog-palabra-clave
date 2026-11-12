@@ -29,6 +29,7 @@ def resumen_tramos(t, apoyos=()):
     tr = t["tramos"]
     dur = t["duracion_editada"]
     largos = [b - a for a, b in tr]
+    apoyos = [x for x in apoyos if float(x["ini"]) < dur]
     cortes = max(0, len(tr) - 1) + _cortes_de_apoyos(apoyos)
     return {"cortes": cortes, "cortes_por_minuto": cortes / dur * 60 if dur else 0,
             "mediana_entre_cortes": statistics.median(largos) if largos else 0,

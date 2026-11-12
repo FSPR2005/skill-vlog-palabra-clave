@@ -110,14 +110,17 @@ def maquetar_frase(frase, i_clave, est, variante=0, x0=None, y0=None):
     for n, (tipo, palabras) in enumerate(lineas):
         fuente, tam = (clave["fuente"], clave["tamano"]) if tipo == "clave" else (f["fuente"], f["tamano"])
         ancho = sum(ancho_texto(p, fuente, tam) for p in palabras) + esp * (len(palabras) - 1)
+        # si la línea no cabe entre los márgenes se encoge (fscx/fscy) en vez de salirse
+        escala = min(100, int(100 * (W - 2 * margen) / ancho)) if ancho else 100
+        ancho = ancho * escala / 100
         if n:
             x = int(x + f["escalon"] * ancho_prev)
         x = max(margen, min(x, W - margen - int(ancho)))
         xx = x
         for p in palabras:
-            out.append({"texto": p, "x": int(xx), "y": int(y), "estilo": "Clave%d" % (variante % len(f["claves"]))
-                        if tipo == "clave" else "Frase"})
-            xx += ancho_texto(p, fuente, tam) + esp
+            out.append({"texto": p, "x": int(xx), "y": int(y), "escala": escala,
+                        "estilo": "Clave%d" % (variante % len(f["claves"])) if tipo == "clave" else "Frase"})
+            xx += (ancho_texto(p, fuente, tam) + esp) * escala / 100
         y += int(tam * f["interlineado"] * (clave.get("alto_linea", 1.0) if tipo == "clave" else 1.0))
         ancho_prev = ancho
     return out

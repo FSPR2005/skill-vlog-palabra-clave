@@ -38,7 +38,7 @@ def _encuadre(entrada, W, H, fps, hdr=False):
             "setsar=1"]
 
 
-def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=False):
+def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=False, apoyos_hdr=()):
     """apoyos: [(índice de entrada ffmpeg, ini, fin)] en segundos del video editado; tapan la imagen, no la voz."""
     s = est["salida"]
     W, H, fps = s["ancho"], s["alto"], s["fps"]
@@ -49,7 +49,9 @@ def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=Fa
     if apoyos:
         cadenas.append(",".join(f) + "[base0]")
         for k, (idx, ini, fin) in enumerate(apoyos):
-            cadenas.append(",".join(_encuadre(f"[{idx}:v]", W, H, fps)) + f",setpts=PTS-STARTPTS+{ini:.4f}/TB[ap{k}]")
+            hdr_k = k < len(apoyos_hdr) and apoyos_hdr[k]
+            cadenas.append(",".join(_encuadre(f"[{idx}:v]", W, H, fps, hdr_k)) +
+                           f",setpts=PTS-STARTPTS+{ini:.4f}/TB[ap{k}]")
             cadenas.append(f"[base{k}][ap{k}]overlay=eof_action=pass:enable='between(t,{ini:.4f},{fin:.4f})'"
                            f"[base{k + 1}]")
         f = [f"[base{len(apoyos)}]null"]
@@ -67,7 +69,8 @@ def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=Fa
 def filtro_audio(est, tramos, hay_musica=False):
     a = est["audio"]
     fps = est["salida"]["fps"]
-    voz = ["[0:a]aresample=48000"]
+    # async + first_pts=0: respeta un audio que no empieza en 0 (rellena) antes de partirlo en paquetes por cuadro
+    voz = ["[0:a]aresample=48000:async=1:first_pts=0"]
     if tramos:
         voz += [f"asetnsamples=n={muestras_por_cuadro(fps)}:p=0",
                 f"aselect='{expresion_seleccion(tramos, fps)}'", "asetpts=N/SR/TB"]

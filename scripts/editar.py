@@ -51,8 +51,12 @@ def _es_hdr(video):
 def _version_ffmpeg():
     import re
     r = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
-    m = re.search(r"ffmpeg version n?(\d+)", r.stdout)
-    return int(m.group(1)) if m else 7
+    m = re.search(r"ffmpeg version n?(\d+)\.", r.stdout)
+    if m:
+        return int(m.group(1))
+    # compilaciones de git ("N-12345-g..."): libavfilter 10 o más = ffmpeg 7 o más
+    m = re.search(r"libavfilter\s+(\d+)\.", r.stdout)
+    return 7 if m and int(m.group(1)) >= 10 else 6
 
 
 def _grafo_desde_archivo(nombre):
@@ -87,6 +91,10 @@ def comprobar():
 def _palabras(a, trabajo):
     if a.palabras:
         with open(a.palabras, encoding="utf-8") as f:
+            return json.load(f)
+    completo = os.path.join(trabajo, "palabras.json")
+    if os.path.exists(completo):  # la transcripción completa (con las correcciones del usuario) manda
+        with open(completo, encoding="utf-8") as f:
             return json.load(f)
     nombre = "palabras.json" if a.desde is None and a.hasta is None else f"palabras_{a.desde or 0:g}-{a.hasta or 'fin'}.json"
     cache = os.path.join(trabajo, nombre)
@@ -164,30 +172,34 @@ def render(a, est):
     if a.musica:
         entradas += ["-stream_loop", "-1", "-i", os.path.abspath(a.musica)]
     # tomas de apoyo: tapan la imagen en [ini, fin] del video editado; la voz sigue
-    apoyos = []
+    apoyos, apoyos_hdr = [], []
     base_txt = os.path.dirname(os.path.abspath(a.textos)) if a.textos else os.getcwd()
     for k, ap_ in enumerate(textos.get("apoyos", [])):
         ruta = ap_["archivo"]
         if not os.path.isabs(ruta) and not os.path.exists(ruta):
             ruta = os.path.join(base_txt, ruta)  # relativa a la carpeta de textos.json
+        ruta = os.path.abspath(ruta)  # ffmpeg corre con cwd=trabajo
         if not os.path.exists(ruta):
             raise SystemExit(f"no existe la toma de apoyo: {ruta}")
         largo = float(ap_["fin"]) - float(ap_["ini"])
         entradas += ["-ss", str(float(ap_.get("desde", 0))), "-t", f"{largo + 0.1:.3f}", "-an", "-i", ruta]
         apoyos.append((1 + bool(a.musica) + k, float(ap_["ini"]), float(ap_["fin"])))
+        apoyos_hdr.append(_es_hdr(ruta))
+    hdr = _es_hdr(a.video)
+    if hdr:
+        print("video HDR: se convierte a SDR (BT.709) con zscale + tonemap")
     color_filtro = None
     if est["color"]["activar"] and est["color"]["modo"] == "auto":
         from color import medir_color, ajuste_color
-        medido = medir_color(os.path.abspath(a.video), 8, tramos[0][0], tramos[-1][1])
+        from render import TONEMAP
+        medido = medir_color(os.path.abspath(a.video), 8, tramos[0][0], tramos[-1][1], TONEMAP if hdr else None)
         color_filtro = ajuste_color(medido, est["color"]["objetivo"])
         with open(os.path.join(trabajo, "color.json"), "w", encoding="utf-8") as f:
             json.dump({"medido": medido, "objetivo": est["color"]["objetivo"], "filtro": color_filtro}, f, indent=1)
     with open(os.path.join(trabajo, "apoyos.json"), "w", encoding="utf-8") as f:
-        json.dump(textos.get("apoyos", []), f, ensure_ascii=False, indent=0)
-    hdr = _es_hdr(a.video)
-    if hdr:
-        print("video HDR: se convierte a SDR (BT.709) con zscale + tonemap")
-    fv = filtro_video(est, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro, hdr)
+        dur_ed = duracion_total(tramos)
+        json.dump([x for x in textos.get("apoyos", []) if float(x["ini"]) < dur_ed], f, ensure_ascii=False, indent=0)
+    fv = filtro_video(est, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro, hdr, apoyos_hdr)
     if hay_audio:
         fa = filtro_audio(est, usar_tramos, hay_musica=bool(a.musica))
     else:
@@ -230,6 +242,11 @@ def main(argv=None):
     if not a.video or not os.path.exists(a.video):
         ap.error("falta el video crudo (o no existe)")
     est = cargar_estilo(a.estilo)
+    from render import muestras_por_cuadro
+    try:
+        muestras_por_cuadro(est["salida"]["fps"])
+    except ValueError as e:
+        raise SystemExit(f"estilo.json salida.fps: {e}")
     if a.accion == "preparar":
         preparar(a, est)
         return 0

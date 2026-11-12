@@ -43,3 +43,11 @@ def test_eventos_aparecen_palabra_por_palabra_y_se_van_juntos():
 def test_claves_con_signos_tambien_coinciden():
     fr = P(("mi", 0, .1), ("sorpresa", .1, .5))
     assert elegir_clave(fr, claves=["¡Sorpresa!"]) == 1
+
+
+def test_clave_muy_larga_se_encoge_y_no_se_sale():
+    est = cargar_estilo(None)
+    fr = P(("responsabilidades", 0, .5),)
+    m = maquetar_frase(fr, 0, est, variante=0, x0=100, y0=500)
+    assert m[0]["escala"] < 100
+    assert m[0]["x"] >= 0

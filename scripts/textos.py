@@ -132,6 +132,8 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
                 k = fr["claves"][int(e["estilo"][5:])]
                 extra = (f"\\3c{color_ass(k.get('color_brillo', k['color']))}\\bord{k.get('brillo', 0)}"
                          f"\\blur{k.get('brillo', 0)}")
+            if e.get("escala", 100) < 100:
+                extra += f"\\fscx{e['escala']}\\fscy{e['escala']}"
             ev.append(f"Dialogue: 1,{tiempo_ass(e['ini'])},{tiempo_ass(e['fin'])},{e['estilo']},,0,0,0,,"
                       f"{{\\pos({e['x']},{e['y']}){extra}}}{_escapar(e['texto'])}")
     for ti in titulos:

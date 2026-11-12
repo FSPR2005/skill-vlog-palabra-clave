@@ -32,3 +32,9 @@ def test_resumen_suma_los_cortes_de_las_tomas_de_apoyo():
     r = resumen_tramos(t, apoyos)
     # entra 10, cambia 10.7, sale 11.5, entra 30, sale 31 => 5 cortes
     assert r["cortes"] == 5
+
+
+def test_apoyos_fuera_del_video_no_cuentan():
+    t = {"duracion_cruda": 20.0, "duracion_editada": 10.0, "tramos": [[0, 10]]}
+    r = resumen_tramos(t, [{"ini": 2, "fin": 3}, {"ini": 15, "fin": 16}])
+    assert r["cortes"] == 2
