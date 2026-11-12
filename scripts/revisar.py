@@ -14,11 +14,23 @@ import sys
 import tempfile
 
 
-def resumen_tramos(t):
+def _cortes_de_apoyos(apoyos):
+    """Cada toma de apoyo es un corte al entrar; al salir también, salvo que otra empiece justo ahí."""
+    ap = sorted((float(x["ini"]), float(x["fin"])) for x in apoyos)
+    n = 0
+    for i, (a, b) in enumerate(ap):
+        n += 1
+        if not (i + 1 < len(ap) and abs(ap[i + 1][0] - b) < 0.05):
+            n += 1
+    return n
+
+
+def resumen_tramos(t, apoyos=()):
     tr = t["tramos"]
     dur = t["duracion_editada"]
     largos = [b - a for a, b in tr]
-    return {"cortes": max(0, len(tr) - 1), "cortes_por_minuto": (len(tr) - 1) / dur * 60 if dur else 0,
+    cortes = max(0, len(tr) - 1) + _cortes_de_apoyos(apoyos)
+    return {"cortes": cortes, "cortes_por_minuto": cortes / dur * 60 if dur else 0,
             "mediana_entre_cortes": statistics.median(largos) if largos else 0,
             "recorte": 1 - dur / t["duracion_cruda"] if t["duracion_cruda"] else 0}
 
@@ -71,7 +83,13 @@ def main(argv=None):
     t = os.path.join(a.trabajo, "tramos.json")
     if os.path.exists(t):
         with open(t, encoding="utf-8") as f:
-            print(json.dumps(resumen_tramos(json.load(f)), indent=1))
+            tramos = json.load(f)
+        apoyos = []
+        ta = os.path.join(a.trabajo, "apoyos.json")
+        if os.path.exists(ta):
+            with open(ta, encoding="utf-8") as f:
+                apoyos = json.load(f)
+        print(json.dumps(resumen_tramos(tramos, apoyos), indent=1))
     return 0
 
 

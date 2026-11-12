@@ -64,7 +64,7 @@ def _limpia(p):
 def elegir_clave(frase, claves=None):
     """Índice de la palabra clave de la frase, o None. Con lista, solo las de la lista."""
     if claves is not None:
-        cl = {c.lower() for c in claves}
+        cl = {_limpia(c) for c in claves}
         for i, w in enumerate(frase):
             if _limpia(w["p"]) in cl:
                 return i

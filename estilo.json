@@ -18,11 +18,11 @@
     "activar": true,
     "modo": "auto",
     "objetivo": {
-      "luma": 128,
-      "saturacion": 50,
-      "negro": 12,
+      "luma": 122,
+      "saturacion": 57,
+      "negro": 13,
       "blanco": 222,
-      "calidez": 20
+      "calidez": 19
     },
     "brillo": 0.02,
     "contraste": 0.96,
@@ -73,6 +73,7 @@
       "color": "#FFFFFF",
       "posicion_x": 0.5,
       "posicion_y": 0.3,
+      "posicion_y_apoyo": 0.5,
       "pop_ms": 0,
       "pop_desde": 100
     }

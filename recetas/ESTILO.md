@@ -1,7 +1,7 @@
 # El estilo, medido
 
-Cómo se obtuvo: 6 videos verticales de una misma creadora de vlogs de estilo de vida (los 5 más vistos de su perfil, de
-41 a 158 s, y uno largo de 6 min), descargados solo para medirlos y nunca incluidos aquí. Por video: detección de cortes
+Cómo se obtuvo: se analizaron 6 videos públicos verticales de vlogs de estilo de vida de una misma cuenta, de menos de
+1 min a varios minutos. Ningún video, cuadro, audio ni texto de esa cuenta se incluye aquí: solo las medidas. Por video: detección de cortes
 con ffmpeg (`scene` por cuadro a 30 cuadros/s; un corte es un pico 6 veces mayor que la mediana de los 15 cuadros
 vecinos o mayor que 0.3), hojas a 1 cuadro/s y tiras a 10 y 30 cuadros/s alrededor de los textos, transcripción con
 faster-whisper `small`, recortes a resolución completa para medir letras, y métricas de color sobre 1 cuadro de cada 2 s.
@@ -10,7 +10,7 @@ Los números de abajo son los que usa `estilo.json`. "Medido" es lo que salió; 
 
 ## 1. Formato
 
-- Medido: 1080x1920, 60 cuadros/s en 5 de 6 (uno a 30). Los tres más vistos duran 41, 43 y 48 s.
+- Medido: 1080x1920, 60 cuadros/s en 5 de 6 (uno a 30). Los cortos más vistos duran menos de 1 min.
 - En la skill: 1080x1920 a 30 cuadros/s (el material de teléfono rara vez trae 60 reales; súbelo en `salida.fps`).
 
 ## 2. Cortes y ritmo
@@ -21,6 +21,11 @@ Los números de abajo son los que usa `estilo.json`. "Medido" es lo que salió; 
 | B | dos tomas de la misma persona | 39.5 | 0.7 s | 0.6-2.0 s |
 | C | voz en off sobre tomas de apoyo | 69.7 | 0.7 s | 0.57-1.03 s |
 | D | vlog caminando con el teléfono | 49.2 | 1.13 s | 0.77-1.5 s |
+| E | a cámara en un auto + apoyo | 39.4 | 1.23 s | 0.73-1.97 s |
+| F | largo (abrir paquetes), 2 ventanas de 150 y 65 s | 51-56 | 0.93-1.0 s | 0.63-1.57 s |
+
+La detección por picos se queda corta en los cortes en salto con el mismo fondo (se ven en las tiras a 10 cuadros/s y no
+siempre dan pico): las cifras son un piso.
 
 - Todos los cortes son secos: sin fundidos, sin barridos. Una sola transición de bloques con falla digital en 6 videos.
 - Hablando a cámara: corte en salto cada 1.5-3 s, en las pausas. Tomas de apoyo: cada 0.6-1.0 s, encadenadas.
@@ -46,7 +51,8 @@ Los números de abajo son los que usa `estilo.json`. "Medido" es lo que salió; 
 
 ## 5. Título del gancho
 
-- Medido: en pantalla desde el cuadro 0 o antes de 0.3 s, 1-2.5 s. Dos letras: una línea chica en caligráfica fina color
+- Medido: en pantalla desde el cuadro 0 o antes de 1 s; dura 1.5-3 s, o hasta ~8 s si lleva un número que va
+  subiendo (un contador que cambia con cada corte). Dos letras: una línea chica en caligráfica fina color
   amarillo pálido arriba a la izquierda y, debajo, el tema en sans muy negrita, blanca, a veces con textura de sello;
   tercio superior (20-23 % desde arriba). Variante: la frase se arma palabra por palabra en escalera
   (cada renglón empieza más a la derecha) con la clave en pastel.
@@ -54,19 +60,19 @@ Los números de abajo son los que usa `estilo.json`. "Medido" es lo que salió; 
 
 ## 6. Notas a mano
 
-- Medido: en 2 de 6 videos, 1-4 por video: un saludo, una medida con flecha, una reacción. Blancas, manuscritas,
+- Medido: en 3 de 6 videos, 1-4 por video: un saludo, una medida o un botón con flecha, una reacción. Blancas, manuscritas,
   inclinadas ~8° subiendo a la derecha, junto a la cabeza o al objeto.
 - En la skill: `notas` (Gochi Hand, `rotacion` -8, que sube a la derecha).
 
 ## 7. Color
 
-| Métrica (0-255) | Mediana de los 4 medidos | Rango |
+| Métrica (0-255) | Mediana de los 6 videos = `color.objetivo` | Rango |
 |---|---|---|
-| Luma media | 128 | 119-132 |
-| Saturación media (HSV) | 53 | 39-89 |
-| Negro (percentil 2) | 13 | 10-23 |
-| Blanco (percentil 98) | 222 | 216-223 |
-| Calidez (R - B) | 19 | 13-34 |
+| Luma media | 122 | 114-132 |
+| Saturación media (HSV) | 57 | 39-89 |
+| Negro (percentil 2) | 13 | 8-23 |
+| Blanco (percentil 98) | 222 | 206-225 |
+| Calidez (R - B) | 19 | 4-34 |
 
 - Luz natural, interiores claros, blancos que no queman (nunca llegan a 255), poca saturación salvo en la ropa.
 - En la skill: `color.modo = "auto"` mide 8 cuadros de TU video y calcula `colorlevels` (negro y blanco), `eq` (gamma y
@@ -78,6 +84,7 @@ AUDIO_PENDIENTE
 
 ## 9. Lo que no se replica
 
-- Efectos de cara de la app (ojos grandes, deformación) en 2 de 6 videos, stickers con imágenes, burbujas y destellos.
+- Efectos de cara de la app (ojos grandes, deformación) en 2 de 6 videos, stickers con imágenes o emojis, burbujas,
+  destellos de luz de color entre tomas (1 video) y recortes de otra persona insertados como meme.
 - Burbujas de "responder comentario" de la app.
 - Las tomas de apoyo y la música: dependen del material que tenga el usuario.

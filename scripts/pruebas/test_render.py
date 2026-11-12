@@ -10,10 +10,9 @@ from render import expresion_seleccion, filtro_video, filtro_audio
 HAY_FFMPEG = shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
 
 
-def test_expresion_seleccion_un_termino_por_tramo():
+def test_expresion_seleccion_usa_indices_de_cuadro():
     e = expresion_seleccion([(1.0, 2.0), (3.5, 4.0)], fps=30)
-    assert e.count("between(t") == 2
-    assert "1.0000" in e and "3.5000" in e
+    assert e == "between(n,30,59)+between(n,105,119)"
 
 
 def test_filtro_video_lleva_encuadre_cortes_color_y_texto():
@@ -40,6 +39,7 @@ def test_filtro_video_sin_cortes_ni_color():
 def test_filtro_audio_con_y_sin_musica():
     est = cargar_estilo(None)
     sin = filtro_audio(est, [(0.0, 1.0)], hay_musica=False)
+    assert "asetnsamples=n=1600:p=0" in sin
     assert "aselect=" in sin and "loudnorm" in sin and "[aout]" in sin and "sidechaincompress" not in sin
     con = filtro_audio(est, [(0.0, 1.0)], hay_musica=True)
     assert "[1:a]" in con and "sidechaincompress" in con and "amix" in con
@@ -120,3 +120,33 @@ def test_render_con_toma_de_apoyo_y_musica(tmp_path):
     dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                                 str(sal)], capture_output=True, text=True).stdout)
     assert 3.8 < dur < 4.2, dur
+
+
+@pytest.mark.skipif(not HAY_FFMPEG, reason="requiere ffmpeg")
+def test_cuarenta_cortes_no_desfasan_audio_y_video(tmp_path):
+    from editar import main
+    crudo = tmp_path / "crudo.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=180x320:rate=30:duration=40",
+                    "-f", "lavfi", "-i", "sine=f=440:d=40", "-shortest", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-c:a", "aac", str(crudo)], check=True)
+    # 40 palabras de 0.5 s separadas por 0.5 s de silencio => 40 tramos
+    pal = [{"p": f"p{i}", "ini": i + 0.07, "fin": i + 0.53} for i in range(40)]
+    (tmp_path / "p.json").write_text(json.dumps(pal), encoding="utf-8")
+    (tmp_path / "mini.json").write_text(json.dumps({"salida": {"ancho": 180, "alto": 320, "preset": "ultrafast"},
+                                                    "color": {"activar": False},
+                                                    "subtitulos": {"activar": False}}), encoding="utf-8")
+    sal = tmp_path / "ed.mp4"
+    assert main(["render", str(crudo), "--salida", str(sal), "--trabajo", str(tmp_path / "tr"), "--palabras",
+                 str(tmp_path / "p.json"), "--estilo", str(tmp_path / "mini.json")]) == 0
+    esperado = json.loads((tmp_path / "tr" / "tramos.json").read_text(encoding="utf-8"))["duracion_editada"]
+    info = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,duration",
+                                      "-of", "json", str(sal)], capture_output=True, text=True).stdout)
+    d = {s["codec_type"]: float(s["duration"]) for s in info["streams"]}
+    assert abs(d["video"] - esperado) <= 1 / 30 + 1e-3, (d, esperado)
+    assert abs(d["audio"] - d["video"]) <= 1 / 30 + 0.03, d
+
+
+def test_hdr_se_lleva_a_bt709():
+    est = cargar_estilo(None)
+    f = filtro_video(est, None, None, None, hdr=True)
+    assert "tonemap" in f and f.index("tonemap") < f.index("crop=")

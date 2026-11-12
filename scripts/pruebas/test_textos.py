@@ -77,3 +77,26 @@ def test_posiciones_tambien_mueven_la_palabra_suelta():
     lineas = [l for l in ass.splitlines() if l.startswith("Dialogue:")]
     assert "\pos(540,576)" in lineas[0]
     assert "\pos(540,1632)" in lineas[1]
+
+
+def test_palabra_suelta_va_a_media_pantalla_en_modo_palabra():
+    est = cargar_estilo(None)
+    est["subtitulos"]["modo"] = "palabra"
+    pal = P(("hola", 0.5, 0.8), ("mesa", 3.0, 3.4))
+    ass = generar_ass(pal, est, palabra_suelta=[[2.5, 5.0]])
+    lineas = [l for l in ass.splitlines() if l.startswith("Dialogue:")]
+    assert "\pos(540,576)" in lineas[0] and "\pos(540,960)" in lineas[1]
+
+
+def test_titulo_largo_se_encoge_para_caber():
+    est = cargar_estilo(None)
+    ass = generar_ass([], est, titulos=[{"chico": "a", "grande": "una frase grande demasiado larga", "ini": 0, "fin": 2}])
+    linea = [l for l in ass.splitlines() if ",TituloGrande,," in l][0]
+    assert "\\fscx" in linea
+
+
+def test_titulo_corto_no_se_toca():
+    est = cargar_estilo(None)
+    ass = generar_ass([], est, titulos=[{"chico": "a", "grande": "regalos", "ini": 0, "fin": 2}])
+    linea = [l for l in ass.splitlines() if ",TituloGrande,," in l][0]
+    assert "\\fscx" not in linea

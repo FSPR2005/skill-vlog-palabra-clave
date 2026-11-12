@@ -38,3 +38,8 @@ def test_eventos_aparecen_palabra_por_palabra_y_se_van_juntos():
     primera = [e for e in ev if e["fin"] <= 1.2 + 1e-6]
     assert [round(e["ini"], 2) for e in primera] == [0.0, 0.1, 0.2]
     assert len({e["fin"] for e in primera}) == 1
+
+
+def test_claves_con_signos_tambien_coinciden():
+    fr = P(("mi", 0, .1), ("sorpresa", .1, .5))
+    assert elegir_clave(fr, claves=["¡Sorpresa!"]) == 1

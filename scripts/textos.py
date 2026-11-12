@@ -56,6 +56,16 @@ def _estilo(nombre, fuente, tamano, color, sombra_col, sombra, alin=5, contorno=
             f"0,0,0,0,100,100,0,0,1,{contorno},{sombra},{alin},0,0,0,1")
 
 
+def _encoger(texto, fuente, tamano, ancho_max=0.9 * 1080):
+    """Etiqueta \\fscx\\fscy para que el texto quepa en ancho_max (o "" si ya cabe)."""
+    from frases import ancho_texto
+    w = ancho_texto(texto, fuente, tamano)
+    if w <= ancho_max:
+        return ""
+    k = int(100 * ancho_max / w)
+    return f"\\fscx{k}\\fscy{k}"
+
+
 def _en_tramos(t, tramos):
     return any(a <= t < b for a, b in tramos)
 
@@ -107,8 +117,10 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
                 k = fr["claves"][0]
                 nombre = "Clave0"
                 extra = (f"\\an5\\3c{color_ass(k.get('color_brillo', k['color']))}\\bord{k.get('brillo', 0)}"
-                         f"\\blur{k.get('brillo', 0)}")
+                         f"\\blur{k.get('brillo', 0)}" + _encoger(b["texto"], k["fuente"], k["tamano"]))
             px, py = x, y
+            if _en_tramos(b["ini"], palabra_suelta):
+                py = int(H * pa["posicion_y_apoyo"])
             for pos in posiciones:
                 if pos["ini"] <= b["ini"] < pos["fin"]:
                     px, py = int(W * pos["x"]), int(H * pos["y"])
@@ -129,10 +141,12 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
         f = fad(t["entrada_ms"], t["salida_ms"])
         if ti.get("chico"):
             ev.append(f"Dialogue: 2,{tiempo_ass(ti['ini'])},{tiempo_ass(ti['fin'])},TituloChico,,0,0,0,,"
-                      f"{{\\pos({xc},{y - t['separacion']}){f}}}{_escapar(ti['chico'])}")
+                      f"{{\\pos({xc},{y - t['separacion']}){f}{_encoger(ti['chico'], t['fuente_chica'], t['tamano_chica'])}}}"
+                      f"{_escapar(ti['chico'])}")
         if ti.get("grande"):
             ev.append(f"Dialogue: 2,{tiempo_ass(ti['ini'])},{tiempo_ass(ti['fin'])},TituloGrande,,0,0,0,,"
-                      f"{{\\pos({xg},{y}){f}}}{_escapar(ti['grande'])}")
+                      f"{{\\pos({xg},{y}){f}{_encoger(ti['grande'], t['fuente_grande'], t['tamano_grande'])}}}"
+                      f"{_escapar(ti['grande'])}")
     for no in notas:
         x = int(W * no.get("posicion_x", n["posicion_x"]))
         y = int(H * no.get("posicion_y", n["posicion_y"]))

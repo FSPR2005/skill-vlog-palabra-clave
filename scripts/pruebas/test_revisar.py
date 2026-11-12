@@ -24,3 +24,11 @@ def test_hoja_de_cuadros_sale(tmp_path):
     sal = tmp_path / "hoja.jpg"
     hoja_de_cuadros(str(v), str(sal), cada=1.0)
     assert sal.exists() and sal.stat().st_size > 1000
+
+
+def test_resumen_suma_los_cortes_de_las_tomas_de_apoyo():
+    t = {"duracion_cruda": 60.0, "duracion_editada": 60.0, "tramos": [[0, 60]]}
+    apoyos = [{"ini": 10, "fin": 10.7}, {"ini": 10.7, "fin": 11.5}, {"ini": 30, "fin": 31}]
+    r = resumen_tramos(t, apoyos)
+    # entra 10, cambia 10.7, sale 11.5, entra 30, sale 31 => 5 cortes
+    assert r["cortes"] == 5

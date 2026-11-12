@@ -36,6 +36,30 @@ def _probar(video):
     return float(info["format"]["duration"]), any(s["codec_type"] == "audio" for s in info["streams"])
 
 
+def _es_hdr(video):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=color_transfer",
+                        "-of", "csv=p=0", video], capture_output=True, text=True)
+    if r.stdout.strip() not in ("arib-std-b67", "smpte2084"):
+        return False
+    filtros = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True).stdout
+    if " zscale " not in filtros:
+        print("AVISO: el video es HDR y tu ffmpeg no trae zscale; los colores pueden salir lavados")
+        return False
+    return True
+
+
+def _version_ffmpeg():
+    import re
+    r = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
+    m = re.search(r"ffmpeg version n?(\d+)", r.stdout)
+    return int(m.group(1)) if m else 7
+
+
+def _grafo_desde_archivo(nombre):
+    """El grafo va en un archivo (sin límite de largo de la línea de comando). ffmpeg 7+ usa -/filter_complex."""
+    return ["-/filter_complex", nombre] if _version_ffmpeg() >= 7 else ["-filter_complex_script", nombre]
+
+
 def comprobar():
     ok = True
     for prog in ("ffmpeg", "ffprobe"):
@@ -64,12 +88,13 @@ def _palabras(a, trabajo):
     if a.palabras:
         with open(a.palabras, encoding="utf-8") as f:
             return json.load(f)
-    cache = os.path.join(trabajo, "palabras.json")
+    nombre = "palabras.json" if a.desde is None and a.hasta is None else f"palabras_{a.desde or 0:g}-{a.hasta or 'fin'}.json"
+    cache = os.path.join(trabajo, nombre)
     if os.path.exists(cache):
         with open(cache, encoding="utf-8") as f:
             return json.load(f)
     from transcribir import transcribir
-    pal = transcribir(a.video, a.modelo, a.idioma)
+    pal = transcribir(a.video, a.modelo, a.idioma, a.hilos, a.desde, a.hasta)
     with open(cache, "w", encoding="utf-8") as f:
         json.dump(pal, f, ensure_ascii=False, indent=0)
     return pal
@@ -142,7 +167,9 @@ def render(a, est):
     apoyos = []
     base_txt = os.path.dirname(os.path.abspath(a.textos)) if a.textos else os.getcwd()
     for k, ap_ in enumerate(textos.get("apoyos", [])):
-        ruta = ap_["archivo"] if os.path.isabs(ap_["archivo"]) else os.path.join(base_txt, ap_["archivo"])
+        ruta = ap_["archivo"]
+        if not os.path.isabs(ruta) and not os.path.exists(ruta):
+            ruta = os.path.join(base_txt, ruta)  # relativa a la carpeta de textos.json
         if not os.path.exists(ruta):
             raise SystemExit(f"no existe la toma de apoyo: {ruta}")
         largo = float(ap_["fin"]) - float(ap_["ini"])
@@ -155,7 +182,12 @@ def render(a, est):
         color_filtro = ajuste_color(medido, est["color"]["objetivo"])
         with open(os.path.join(trabajo, "color.json"), "w", encoding="utf-8") as f:
             json.dump({"medido": medido, "objetivo": est["color"]["objetivo"], "filtro": color_filtro}, f, indent=1)
-    fv = filtro_video(est, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro)
+    with open(os.path.join(trabajo, "apoyos.json"), "w", encoding="utf-8") as f:
+        json.dump(textos.get("apoyos", []), f, ensure_ascii=False, indent=0)
+    hdr = _es_hdr(a.video)
+    if hdr:
+        print("video HDR: se convierte a SDR (BT.709) con zscale + tonemap")
+    fv = filtro_video(est, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro, hdr)
     if hay_audio:
         fa = filtro_audio(est, usar_tramos, hay_musica=bool(a.musica))
     else:
@@ -165,13 +197,11 @@ def render(a, est):
     with open(os.path.join(trabajo, "filtro.txt"), "w", encoding="utf-8") as f:
         f.write(grafo)
     salida = os.path.abspath(a.salida)
-    cmd = ["ffmpeg", "-v", "error", "-stats", "-y", *entradas, "-filter_complex", grafo,
+    cmd = ["ffmpeg", "-v", "error", "-stats", "-y", *entradas, *_grafo_desde_archivo("filtro.txt"),
            "-map", "[vout]", "-map", "[aout]",
            "-c:v", "libx264", "-preset", s["preset"], "-crf", str(s["crf"]), "-x264-params", "rc-lookahead=10",
            "-threads", str(a.hilos), "-c:a", "aac", "-b:a", f"{s['audio_kbps']}k", "-shortest",
            "-movflags", "+faststart", salida]
-    if len(" ".join(cmd)) > 30000:
-        raise SystemExit("Demasiados cortes para una sola línea de comando: sube cortes.silencio_max o usa --desde/--hasta")
     r = subprocess.run(cmd, cwd=trabajo)
     if r.returncode == 0:
         print("listo:", salida)
