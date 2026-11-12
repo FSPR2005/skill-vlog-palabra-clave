@@ -2,7 +2,8 @@
 
 Skill para [Claude Code](https://docs.claude.com/en/docs/claude-code) que edita un video crudo con el estilo de los
 vlogs de estilo de vida de TikTok y Reels: le subes tu video y el agente te lo devuelve cortado, rotulado y con color,
-listo para subir. Todo corre en tu computadora y es gratis: ffmpeg, faster-whisper y Python.
+listo para subir. Todo corre en tu computadora (tras bajar una vez el modelo de whisper) y es gratis: ffmpeg,
+faster-whisper y Python.
 
 > English summary at the end.
 
@@ -43,6 +44,8 @@ git clone https://github.com/<tu-usuario>/skill-vlog-palabra-clave .claude/skill
 pip install -r ~/.claude/skills/vlog-palabra-clave/requirements.txt
 python ~/.claude/skills/vlog-palabra-clave/scripts/editar.py comprobar
 ```
+
+Si `python` o `pip` no existen, usa `python3` / `pip3` (Mac y Linux) o `py` (Windows).
 
 Cambia `<tu-usuario>` por la cuenta donde esté publicado el repositorio. En Windows, `~` es `%USERPROFILE%`. Reinicia Claude Code y escribe, por ejemplo:
 *"edita este video estilo vlog: <ruta de tu video>"*.

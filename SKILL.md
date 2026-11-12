@@ -19,6 +19,7 @@ Rutas: `<skill>` es la carpeta de esta skill. Trabaja en una carpeta junto al vi
 ## 1. Requisitos
 
 `python <skill>/scripts/editar.py comprobar` → dice qué falta (ffmpeg con libass, faster-whisper, fuentes).
+Si `python` no existe, usa `python3` (Mac/Linux) o `py` (Windows); lo mismo con `pip` / `pip3`.
 Instalar: `pip install -r <skill>/requirements.txt` y ffmpeg (Windows: `winget install Gyan.FFmpeg`; Mac: `brew install ffmpeg`;
 Linux: `sudo apt install ffmpeg`). Si `comprobar` dice que a tu ffmpeg le falta libass, instala una compilación completa.
 La primera transcripción baja el modelo `small` de whisper (~480 MB) una sola vez.
@@ -58,7 +59,10 @@ Reglas (salen de medir el estilo, ver `recetas/ESTILO.md`):
   palabras de entrada, en caligráfica) + `grande` (2-3 palabras, el tema). Dura 1.5-3 s. Si la persona saluda, una `nota`
   a mano de 1 s ("hola :)") cerca de la cabeza. El primer corte cae antes de los 3 s (los scripts lo hacen si hay pausa).
 - **Claves**: UNA palabra cada 5-8 s, la que carga el sentido (sustantivo, número, adjetivo fuerte). Nunca muletillas,
-  marcas de terceros ni nombres de personas. Salen grandes, en pastel y con brillo, en el lugar del subtítulo.
+  marcas de terceros ni nombres de personas. Salen grandes, en pastel y con brillo, en el lugar del subtítulo
+  (su letra, tamaño y colores están en `subtitulos.frases.claves` de `estilo.json`: la `[0]` en modo palabra).
+- **Modo de subtítulo**: `subtitulos.modo` es `"palabra"` (una palabra a la vez, el del estilo) o `"frases"` (la frase se
+  arma palabra por palabra en escalera, para un gancho tipo lista); se cambia con `--estilo`.
 - **Notas a mano**: 1 o 2 en todo el video, para un aparte o una reacción ("nooo..", "mido 1.50"). Cerca del sujeto.
 - **Tomas de apoyo** (solo si el usuario las dio): cuando la voz describe algo, tapa la imagen con un clip de 0.6-1.0 s y
   encadena varios seguidos. Pon esos mismos rangos en `palabra_suelta`: ahí la palabra va a media pantalla (50 %).
@@ -99,7 +103,8 @@ estilo no se pudo, dilo (ver límites).
   con una voz de corrido, contra 30-70 del estilo con tomas de apoyo).
 - No pone música: solo mezcla la que el usuario tenga derecho a usar (`--musica`), bajo la voz.
 - Los subtítulos salen de whisper: revisa nombres propios y palabras raras en `edicion/palabras.json`, corrígelos ahí y
-  vuelve a correr `render` (reutiliza ese archivo y recalcula cortes y textos).
+  vuelve a correr `render` (sin `--palabras`: lee ese archivo solo, también con `--desde`/`--hasta`). Si cambiaste
+  tiempos, los cortes se recalculan: vuelve a leer `guion.txt` y ajusta los tiempos de `textos.json`.
 - Los tramos sin voz se cortan enteros (una demostración en silencio desaparece): usa `--sin-cortes` o trabaja ese
   tramo aparte con `--desde`/`--hasta`.
 - Video HDR (iPhone): se convierte a SDR si tu ffmpeg trae `zscale`; si no, avisa y puede salir lavado.
