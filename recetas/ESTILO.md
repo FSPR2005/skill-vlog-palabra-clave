@@ -40,7 +40,7 @@ siempre dan pico): las cifras son un piso.
   fundido ni rebote) cuando se dice la palabra y se queda hasta la siguiente.
 - Posición: centrada a lo ancho, en el hueco sobre la cabeza (25-35 % desde arriba) cuando se habla a cámara; a media
   pantalla (~50 %) sobre tomas de apoyo; abajo (85-92 %) en planos cerrados de manos o mesa.
-- En la skill: Poppins SemiBold (OFL) tamaño ASS 52 (iguala el ancho medido de las palabras: 41-61), `posicion_y` 0.30; `palabra_suelta` → 0.5; `posiciones` por tramo.
+- En la skill: Poppins SemiBold (OFL) tamaño ASS 52 (las palabras medidas piden entre 41 y 61 de tamaño ASS para igualar su ancho en px; 52 es el medio), `posicion_y` 0.30; `palabra_suelta` → 0.5; `posiciones` por tramo.
 
 ## 4. Palabra clave
 
@@ -93,7 +93,9 @@ siempre dan pico): las cifras son un piso.
 - Efectos de sonido y si la música sigue el ritmo de los cortes: [NO MEDIDO] (no hay método fiable sin escuchar; no se
   incluyen).
 - En la skill: voz normalizada a -14 LUFS (`audio.voz_lufs`), música del usuario a -24 dB (`audio.musica_db`) con
-  *ducking* (`sidechaincompress` umbral 0.03, razón 6, ataque 20 ms, liberación 350 ms) para que suba en los huecos.
+  *ducking* (`sidechaincompress` umbral 0.03, razón 6, ataque 20 ms, liberación 350 ms): baja la música mientras se
+  habla y la deja volver en los huecos. -24 dB es una ganancia sobre la pista tal como viene y queda más baja que lo
+  medido, a propósito, para que la voz se entienda; para una cama como la del estilo, sube `musica_db` a -14 / -18.
 
 ## 9. Lo que no se replica
 
