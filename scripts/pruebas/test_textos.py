@@ -45,8 +45,8 @@ def test_generar_ass_tiene_estilos_palabras_y_titulo():
         assert f"Style: {st}," in ass, st
     assert ",Frase,," in ass and ",Clave0,," in ass and "hola" in ass and "mundo" in ass
     assert "regalos" in ass and "abrimos los" in ass and "hola :)" in ass
-    # mientras está el título, las palabras siguen saliendo (son capas distintas)
-    assert ass.count("Dialogue:") == 5
+    # mientras está el título, las palabras siguen saliendo (son capas distintas); la clave lleva halo (+1 línea)
+    assert ass.count("Dialogue:") == 6
 
 
 def test_tramo_de_palabra_suelta_usa_el_otro_modo():
@@ -56,7 +56,7 @@ def test_tramo_de_palabra_suelta_usa_el_otro_modo():
     ass = generar_ass(pal, est, palabra_suelta=[[2.5, 5.0]])
     lineas = [l for l in ass.splitlines() if l.startswith("Dialogue:")]
     assert sum(",Palabra,," in l for l in lineas) == 2
-    assert sum(",Palabra,," not in l for l in lineas) == 2
+    assert sum(",Palabra,," not in l and not l.startswith("Dialogue: 0,") for l in lineas) == 2
 
 
 def test_modo_palabra_pinta_las_claves_con_su_estilo_y_brillo():
@@ -65,8 +65,11 @@ def test_modo_palabra_pinta_las_claves_con_su_estilo_y_brillo():
     pal = P(("buscando", 0.5, 0.9), ("una", 1.0, 1.1), ("marca", 1.2, 1.6))
     ass = generar_ass(pal, est, claves=["buscando"])
     lineas = [l for l in ass.splitlines() if l.startswith("Dialogue:")]
-    assert ",Clave0,," in lineas[0] and "\\blur" in lineas[0]
-    assert all(",Palabra,," in l for l in lineas[1:])
+    # halo (borde difuso, relleno transparente) debajo y la letra nítida encima
+    assert ",Clave0,," in lineas[0] and "\\blur" in lineas[0] and "\\1a&HFF&" in lineas[0] and "\\3a&H80&" in lineas[0]
+    assert ",Clave0,," in lineas[1] and "\\blur" not in lineas[1] and "\\bord0" in lineas[1]
+    assert lineas[0].startswith("Dialogue: 0,") and lineas[1].startswith("Dialogue: 1,")
+    assert all(",Palabra,," in l for l in lineas[2:])
 
 
 def test_posiciones_tambien_mueven_la_palabra_suelta():
@@ -75,8 +78,8 @@ def test_posiciones_tambien_mueven_la_palabra_suelta():
     pal = P(("arriba", 0.5, 0.9), ("abajo", 3.0, 3.4))
     ass = generar_ass(pal, est, posiciones=[{"ini": 2.0, "fin": 5.0, "x": 0.5, "y": 0.85}])
     lineas = [l for l in ass.splitlines() if l.startswith("Dialogue:")]
-    assert "\pos(540,576)" in lineas[0]
-    assert "\pos(540,1632)" in lineas[1]
+    assert "\\pos(540,576)" in lineas[0]
+    assert "\\pos(540,1632)" in lineas[1]
 
 
 def test_palabra_suelta_va_a_media_pantalla_en_modo_palabra():
@@ -85,7 +88,7 @@ def test_palabra_suelta_va_a_media_pantalla_en_modo_palabra():
     pal = P(("hola", 0.5, 0.8), ("mesa", 3.0, 3.4))
     ass = generar_ass(pal, est, palabra_suelta=[[2.5, 5.0]])
     lineas = [l for l in ass.splitlines() if l.startswith("Dialogue:")]
-    assert "\pos(540,576)" in lineas[0] and "\pos(540,960)" in lineas[1]
+    assert "\\pos(540,576)" in lineas[0] and "\\pos(540,960)" in lineas[1]
 
 
 def test_titulo_largo_se_encoge_para_caber():

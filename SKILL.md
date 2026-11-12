@@ -95,8 +95,8 @@ estilo no se pudo, dilo (ver límites).
 ## Límites (dilo, no lo simules)
 
 - No hay efectos de cara (ojos grandes, deformaciones), stickers animados, burbujas ni destellos: son efectos de la app.
-- No inventa tomas de apoyo: si no hay, el ritmo de cortes depende de las pausas del crudo (~8-25 cortes/min hablando
-  a cámara, contra 30-70 del estilo con tomas de apoyo).
+- No inventa tomas de apoyo: si no hay, el ritmo de cortes depende de las pausas del crudo (17 cortes/min en la prueba
+  con una voz de corrido, contra 30-70 del estilo con tomas de apoyo).
 - No pone música: solo mezcla la que el usuario tenga derecho a usar (`--musica`), bajo la voz.
 - Los subtítulos salen de whisper: revisa nombres propios y palabras raras en `edicion/palabras.json`, corrígelos ahí y
   vuelve a correr `render` (reutiliza ese archivo y recalcula cortes y textos).

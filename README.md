@@ -29,7 +29,8 @@ Las medidas del estilo (ritmo de cortes, tamaños, posiciones, colores) y cómo 
   `python scripts/editar.py comprobar` dice si a tu ffmpeg le falta libass; en ese caso instala una compilación completa.
 - `pip install -r requirements.txt` (faster-whisper, numpy, pillow; pytest solo para las pruebas).
 - La primera transcripción descarga el modelo `small` de whisper (~480 MB) desde Hugging Face, una sola vez.
-- Corre solo en CPU (no usa la GPU); un video de 1 min tarda unos minutos en una laptop normal.
+- Corre solo en CPU (no usa la GPU). Medido en una laptop: transcribir 35 s de video tomó 49 s (~0.7 GB de RAM) y
+  renderizar 28 s a 1080x1920 con `--hilos 2`, ~90 s (~0.8 GB).
 
 ## Instalación en Claude Code
 
@@ -68,8 +69,8 @@ Incluyen renders completos con videos sintéticos (necesitan ffmpeg).
 ## Límites
 
 - No hace efectos de cara (ojos grandes), stickers animados, burbujas, destellos ni transiciones de la app.
-- No inventa tomas de apoyo ni música. Sin tomas de apoyo, el ritmo depende de tus pausas: hablando a cámara salen
-  ~8-25 cortes por minuto; el estilo completo, con tomas de apoyo, va de 30 a 70.
+- No inventa tomas de apoyo ni música. Sin tomas de apoyo, el ritmo depende de tus pausas (en la prueba, una voz de
+  corrido: 17 cortes por minuto); el estilo completo, con tomas de apoyo, va de 30 a 70.
 - whisper se equivoca con nombres propios: corrígelos en `palabras.json` antes del render final.
 - Un video horizontal se recorta al centro para 9:16.
 - Copiar un estilo no garantiza alcance; lo que miden las plataformas es que el video se vea completo.

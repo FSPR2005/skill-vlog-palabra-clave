@@ -40,29 +40,30 @@ siempre dan pico): las cifras son un piso.
   fundido ni rebote) cuando se dice la palabra y se queda hasta la siguiente.
 - Posición: centrada a lo ancho, en el hueco sobre la cabeza (25-35 % desde arriba) cuando se habla a cámara; a media
   pantalla (~50 %) sobre tomas de apoyo; abajo (85-92 %) en planos cerrados de manos o mesa.
-- En la skill: Poppins SemiBold (OFL) tamaño ASS 58, `posicion_y` 0.30; `palabra_suelta` → 0.5; `posiciones` por tramo.
+- En la skill: Poppins SemiBold (OFL) tamaño ASS 52 (iguala el ancho medido de las palabras: 41-61), `posicion_y` 0.30; `palabra_suelta` → 0.5; `posiciones` por tramo.
 
 ## 4. Palabra clave
 
 - Medido: 1 cada 5-8 s. La misma sans 2.5-3 veces más grande en azul pastel (#BDE6F4) o amarillo pálido (#F4F0A8) con
   un halo claro; o una caligráfica enorme (ancho ~80 % de la pantalla) en el mismo pastel; a veces un número grande con
   2-3 palabras chicas apiladas a su lado.
-- En la skill: `claves` en `textos.json`; estilo `Clave0` (sans 150) con `\bord6\blur6` de halo; `Clave1` caligráfica.
+- En la skill: `claves` en `textos.json`; estilo `Clave0` (sans 138, el ancho medido) con un halo difuso debajo
+  y la letra nítida encima; `Clave1` caligráfica (300). Si no cabe, se encoge.
 
 ## 5. Título del gancho
 
 - Medido: en pantalla desde el cuadro 0 o antes de 1 s; dura 1.5-3 s, o hasta ~8 s si lleva un número que va
-  subiendo (un contador que cambia con cada corte). Dos letras: una línea chica en caligráfica fina color
+  subiendo (un contador que cambia con cada corte). Dos tipos de letra: una línea chica en caligráfica fina color
   amarillo pálido arriba a la izquierda y, debajo, el tema en sans muy negrita, blanca, a veces con textura de sello;
   tercio superior (20-23 % desde arriba). Variante: la frase se arma palabra por palabra en escalera
   (cada renglón empieza más a la derecha) con la clave en pastel.
-- En la skill: `titulos` (Great Vibes + Poppins ExtraBold, `posicion_y` 0.22) y `subtitulos.modo = "frases"` para la escalera.
+- En la skill: `titulos` (Great Vibes 104 + Poppins ExtraBold 141, que igualan los anchos medidos; `posicion_y` 0.22) y `subtitulos.modo = "frases"` para la escalera.
 
 ## 6. Notas a mano
 
 - Medido: en 3 de 6 videos, 1-4 por video: un saludo, una medida o un botón con flecha, una reacción. Blancas, manuscritas,
   inclinadas ~8° subiendo a la derecha, junto a la cabeza o al objeto.
-- En la skill: `notas` (Gochi Hand, `rotacion` -8, que sube a la derecha).
+- En la skill: `notas` (Gochi Hand 104, `rotacion` -8, que sube a la derecha).
 
 ## 7. Color
 

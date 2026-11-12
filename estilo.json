@@ -50,26 +50,28 @@
       "claves": [
         {
           "fuente": "Poppins SemiBold",
-          "tamano": 150,
+          "tamano": 138,
           "color": "#BDE6F4",
           "alto_linea": 1.0,
-          "brillo": 6,
-          "color_brillo": "#E4F6FC"
+          "brillo": 10,
+          "color_brillo": "#FFFFFF",
+          "opacidad_brillo": 0.5
         },
         {
           "fuente": "Great Vibes",
-          "tamano": 230,
+          "tamano": 300,
           "color": "#BDE6F4",
           "alto_linea": 0.8,
-          "brillo": 4,
-          "color_brillo": "#E4F6FC"
+          "brillo": 10,
+          "color_brillo": "#FFFFFF",
+          "opacidad_brillo": 0.5
         }
       ]
     },
     "palabra": {
       "palabras_por_bloque": 1,
       "fuente": "Poppins SemiBold",
-      "tamano": 58,
+      "tamano": 52,
       "color": "#FFFFFF",
       "posicion_x": 0.5,
       "posicion_y": 0.3,
@@ -80,10 +82,10 @@
   },
   "titulo": {
     "fuente_chica": "Great Vibes",
-    "tamano_chica": 92,
+    "tamano_chica": 104,
     "color_chica": "#F4F0A8",
     "fuente_grande": "Poppins ExtraBold",
-    "tamano_grande": 118,
+    "tamano_grande": 141,
     "color_grande": "#FFFFFF",
     "posicion_y": 0.22,
     "separacion": 72,
@@ -94,7 +96,7 @@
   },
   "notas": {
     "fuente": "Gochi Hand",
-    "tamano": 64,
+    "tamano": 104,
     "color": "#FFFFFF",
     "rotacion": -8,
     "posicion_x": 0.35,

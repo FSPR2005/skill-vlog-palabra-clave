@@ -66,6 +66,21 @@ def _encoger(texto, fuente, tamano, ancho_max=0.9 * 1080):
     return f"\\fscx{k}\\fscy{k}"
 
 
+def _con_halo(ini, fin, estilo, etiquetas, texto, k):
+    """Dos capas: abajo el halo (borde ancho, difuso y semitransparente, relleno transparente); arriba la letra nítida.
+    Un halo opaco del mismo tono que la letra la hace ver borrosa: por eso va claro y a media opacidad."""
+    b = k.get("brillo", 0)
+    nitida = (f"Dialogue: 1,{tiempo_ass(ini)},{tiempo_ass(fin)},{estilo},,0,0,0,,"
+              f"{{{etiquetas}\\bord0\\shad0}}{_escapar(texto)}")
+    if not b:
+        return [nitida]
+    halo = (f"Dialogue: 0,{tiempo_ass(ini)},{tiempo_ass(fin)},{estilo},,0,0,0,,"
+            f"{{{etiquetas}\\1a&HFF&\\shad0\\3c{color_ass(k.get('color_brillo', k['color']))}"
+            f"\\3a&H{round(255 * (1 - k.get('opacidad_brillo', 0.5))):02X}&\\bord{b}\\blur{b}}}"
+            f"{_escapar(texto)}")
+    return [halo, nitida]
+
+
 def _en_tramos(t, tramos):
     return any(a <= t < b for a, b in tramos)
 
@@ -112,30 +127,27 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
         for b in bloques_de_palabras(sueltas, pa["palabras_por_bloque"], s["hueco_max"], s["minusculas"]):
             if b["fin"] - b["ini"] < 0.01:
                 continue
-            nombre, extra = "Palabra", pop
-            if cl and b["texto"].lower() in cl and fr["claves"]:
-                k = fr["claves"][0]
-                nombre = "Clave0"
-                extra = (f"\\an5\\3c{color_ass(k.get('color_brillo', k['color']))}\\bord{k.get('brillo', 0)}"
-                         f"\\blur{k.get('brillo', 0)}" + _encoger(b["texto"], k["fuente"], k["tamano"]))
             px, py = x, y
             if _en_tramos(b["ini"], palabra_suelta):
                 py = int(H * pa["posicion_y_apoyo"])
             for pos in posiciones:
                 if pos["ini"] <= b["ini"] < pos["fin"]:
                     px, py = int(W * pos["x"]), int(H * pos["y"])
-            ev.append(f"Dialogue: 1,{tiempo_ass(b['ini'])},{tiempo_ass(b['fin'])},{nombre},,0,0,0,,"
-                      f"{{\\pos({px},{py}){extra}}}{_escapar(b['texto'])}")
+            if cl and b["texto"].lower() in cl and fr["claves"]:
+                k = fr["claves"][0]
+                ev += _con_halo(b["ini"], b["fin"], "Clave0", f"\\pos({px},{py})\\an5"
+                                + _encoger(b["texto"], k["fuente"], k["tamano"]), b["texto"], k)
+            else:
+                ev.append(f"Dialogue: 1,{tiempo_ass(b['ini'])},{tiempo_ass(b['fin'])},Palabra,,0,0,0,,"
+                          f"{{\\pos({px},{py}){pop}}}{_escapar(b['texto'])}")
         for e in eventos_frases(en_frase, estilo, claves, posiciones):
-            extra = ""
+            esc = f"\\fscx{e['escala']}\\fscy{e['escala']}" if e.get("escala", 100) < 100 else ""
             if e["estilo"].startswith("Clave"):
                 k = fr["claves"][int(e["estilo"][5:])]
-                extra = (f"\\3c{color_ass(k.get('color_brillo', k['color']))}\\bord{k.get('brillo', 0)}"
-                         f"\\blur{k.get('brillo', 0)}")
-            if e.get("escala", 100) < 100:
-                extra += f"\\fscx{e['escala']}\\fscy{e['escala']}"
-            ev.append(f"Dialogue: 1,{tiempo_ass(e['ini'])},{tiempo_ass(e['fin'])},{e['estilo']},,0,0,0,,"
-                      f"{{\\pos({e['x']},{e['y']}){extra}}}{_escapar(e['texto'])}")
+                ev += _con_halo(e["ini"], e["fin"], e["estilo"], f"\\pos({e['x']},{e['y']}){esc}", e["texto"], k)
+            else:
+                ev.append(f"Dialogue: 1,{tiempo_ass(e['ini'])},{tiempo_ass(e['fin'])},{e['estilo']},,0,0,0,,"
+                          f"{{\\pos({e['x']},{e['y']}){esc}}}{_escapar(e['texto'])}")
     for ti in titulos:
         y = int(H * ti.get("posicion_y", t["posicion_y"]))
         xg = W // 2
