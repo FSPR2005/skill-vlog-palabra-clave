@@ -1,0 +1,108 @@
+{
+  "_nota": "Parámetros del estilo. Cambia los valores aquí o en una copia (--estilo mi_estilo.json, basta con las claves que cambian). Tamaños y posiciones en píxeles de un lienzo de 1080x1920; posicion_x/y son fracciones (0 = arriba/izquierda, 1 = abajo/derecha). Colores en #RRGGBB.",
+  "salida": {
+    "ancho": 1080,
+    "alto": 1920,
+    "fps": 30,
+    "crf": 20,
+    "preset": "veryfast",
+    "audio_kbps": 160
+  },
+  "cortes": {
+    "activar": true,
+    "silencio_max": 0.35,
+    "margen_antes": 0.05,
+    "margen_despues": 0.12
+  },
+  "color": {
+    "activar": true,
+    "modo": "auto",
+    "objetivo": {
+      "luma": 128,
+      "saturacion": 50,
+      "negro": 12,
+      "blanco": 222,
+      "calidez": 20
+    },
+    "brillo": 0.02,
+    "contraste": 0.96,
+    "saturacion": 0.92,
+    "gamma": 1.03
+  },
+  "subtitulos": {
+    "activar": true,
+    "modo": "palabra",
+    "minusculas": true,
+    "hueco_max": 0.4,
+    "sombra": 1.5,
+    "opacidad_sombra": 0.35,
+    "frases": {
+      "max_palabras": 4,
+      "pausa": 0.35,
+      "fuente": "Poppins SemiBold",
+      "tamano": 100,
+      "color": "#FFFFFF",
+      "posicion_x": 0.15,
+      "posicion_y": 0.27,
+      "ancho_max": 0.84,
+      "escalon": 0.5,
+      "interlineado": 0.92,
+      "claves": [
+        {
+          "fuente": "Poppins SemiBold",
+          "tamano": 150,
+          "color": "#BDE6F4",
+          "alto_linea": 1.0,
+          "brillo": 6,
+          "color_brillo": "#E4F6FC"
+        },
+        {
+          "fuente": "Great Vibes",
+          "tamano": 230,
+          "color": "#BDE6F4",
+          "alto_linea": 0.8,
+          "brillo": 4,
+          "color_brillo": "#E4F6FC"
+        }
+      ]
+    },
+    "palabra": {
+      "palabras_por_bloque": 1,
+      "fuente": "Poppins SemiBold",
+      "tamano": 58,
+      "color": "#FFFFFF",
+      "posicion_x": 0.5,
+      "posicion_y": 0.3,
+      "pop_ms": 0,
+      "pop_desde": 100
+    }
+  },
+  "titulo": {
+    "fuente_chica": "Great Vibes",
+    "tamano_chica": 92,
+    "color_chica": "#F4F0A8",
+    "fuente_grande": "Poppins ExtraBold",
+    "tamano_grande": 118,
+    "color_grande": "#FFFFFF",
+    "posicion_y": 0.22,
+    "separacion": 72,
+    "desfase_chica_x": -0.12,
+    "sombra": 2,
+    "entrada_ms": 0,
+    "salida_ms": 0
+  },
+  "notas": {
+    "fuente": "Gochi Hand",
+    "tamano": 64,
+    "color": "#FFFFFF",
+    "rotacion": -8,
+    "posicion_x": 0.35,
+    "posicion_y": 0.3,
+    "entrada_ms": 0
+  },
+  "audio": {
+    "voz_lufs": -14,
+    "musica_db": -24,
+    "ducking": true
+  }
+}
