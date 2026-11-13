@@ -182,3 +182,26 @@ def test_render_antes_despues_llena_la_barra(tmp_path):
     dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                                 str(sal)], capture_output=True, text=True).stdout)
     assert 4.8 < dur < 5.2, dur
+
+
+def _uno(linea, inicios):
+    ass = "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n" + linea
+    return [l for l in recortar_ass(ass, inicios).splitlines() if l.startswith("Dialogue:")][0]
+
+
+def test_recortar_quita_la_entrada_ya_pasada_y_conserva_la_salida():
+    l = _uno(r"Dialogue: 2,0:00:00.00,0:00:05.00,TituloGrande,,0,0,0,,{\pos(1,2)\fad(1000,300)}t", {"graficos": 3.0})
+    assert r"\fad(0,300)" in l and l.split(",")[1] == "0:00:03.00"
+
+
+def test_recortar_aplica_el_final_de_un_pop_que_ya_termino():
+    l = _uno(r"Dialogue: 1,0:00:00.50,0:00:01.20,Palabra,,0,0,0,,{\pos(5,5)\fscx120\fscy120"
+             r"\t(0,150,\fscx100\fscy100)}hola", {"subtitulos": 1.0})
+    assert r"\t(" not in l and l.endswith(r"\fscx120\fscy120\fscx100\fscy100}hola")
+
+
+def test_recortar_corre_un_pop_a_medias_y_un_move():
+    l = _uno(r"Dialogue: 1,0:00:00.90,0:00:01.50,Palabra,,0,0,0,,{\pos(5,5)\t(0,300,\fscx100)}x", {"subtitulos": 1.0})
+    assert r"\t(0,200,\fscx100)" in l
+    l = _uno(r"Dialogue: 3,0:00:00.00,0:00:02.00,Nota,,0,0,0,,{\move(0,0,100,0)}n", {"graficos": 1.0})
+    assert r"\move(50,0,100,0)" in l

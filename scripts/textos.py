@@ -93,7 +93,7 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
     palabra_suelta: [[ini, fin]] donde se usa el modo de una palabra al centro (tomas de apoyo) en vez de frases.
     resaltar: palabras o secuencias que van con el estilo Resaltado dentro de la frase (ver frases.indices_resaltados).
     """
-    from frases import eventos_frases, indices_resaltados
+    from frases import eventos_frases, ids_resaltados
     W, H = 1080, 1920
     s, t, n = estilo["subtitulos"], estilo["titulo"], estilo["notas"]
     fr, pa = s["frases"], s["palabra"]
@@ -143,11 +143,13 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
         if pa["pop_ms"]:
             pop = f"\\fscx{pa['pop_desde']}\\fscy{pa['pop_desde']}\\t(0,{int(pa['pop_ms'])},\\fscx100\\fscy100)"
         cl = {limpiar_palabra(c, True) for c in (claves or [])}
-        t_res = [palabras[i]["ini"] for i in indices_resaltados(palabras, resaltar)]
-        for b in bloques_de_palabras(sueltas, pa["palabras_por_bloque"], s["hueco_max"], s["minusculas"]):
+        res_ids, _ = ids_resaltados(palabras, resaltar)
+        n_bl = pa["palabras_por_bloque"]
+        vis = [w for w in sueltas if limpiar_palabra(w["p"], s["minusculas"])]  # las mismas que agrupa bloques_de_palabras
+        for k_bl, b in enumerate(bloques_de_palabras(sueltas, n_bl, s["hueco_max"], s["minusculas"])):
             if b["fin"] - b["ini"] < 0.01:
                 continue
-            es_res = any(abs(t - b["ini"]) < 1e-6 or b["ini"] <= t < b["fin"] for t in t_res)
+            es_res = any(id(w) in res_ids for w in vis[k_bl * n_bl:(k_bl + 1) * n_bl])
             px, py = x, y
             if _en_tramos(b["ini"], palabra_suelta):
                 py = int(H * pa["posicion_y_apoyo"])
@@ -165,7 +167,7 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
             else:
                 ev.append(f"Dialogue: 1,{tiempo_ass(b['ini'])},{tiempo_ass(b['fin'])},Palabra,,0,0,0,,"
                           f"{{\\pos({px},{py}){pop}}}{_escapar(b['texto'])}")
-        for e in eventos_frases(en_frase, estilo, claves, posiciones, resaltar):
+        for e in eventos_frases(en_frase, estilo, claves, posiciones, resaltar, todas=palabras):
             esc = f"\\fscx{e['escala']}\\fscy{e['escala']}" if e.get("escala", 100) < 100 else ""
             if e["estilo"] == "Resaltado":
                 ev += _resaltado(e["ini"], e["fin"], f"\\pos({e['x']},{e['y']}){esc}", e["texto"])

@@ -13,6 +13,8 @@ Cada capa prende uno o varios tipos de edición:
   musica      la pista de --musica (antes de su segundo va en silencio)
 Un tipo que no está en ninguna capa no sale. Todo el texto del marco es un .ass (lienzo 1080x1920).
 """
+import re
+
 from textos import tiempo_ass, color_ass, _escapar
 
 TIPOS = ("subtitulos", "color", "zoom", "graficos", "musica")
@@ -71,6 +73,29 @@ def _categoria(estilo):
     return None
 
 
+_T = re.compile(r"\\t\((-?\d+),(-?\d+),((?:[^()]|\([^()]*\))*)\)")
+_FAD = re.compile(r"\\fad\((\d+),(\d+)\)")
+_MOVE = re.compile(r"\\move\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)\)")
+
+
+def _correr_animaciones(texto, off_ms, dur_ms):
+    """El evento ahora empieza off_ms más tarde: la entrada ya pasó, \\t y \\move siguen donde iban."""
+    texto = _FAD.sub(lambda m: f"\\fad(0,{m.group(2)})", texto)
+
+    def t(m):
+        t1, t2, mods = int(m.group(1)) - off_ms, int(m.group(2)) - off_ms, m.group(3)
+        if t2 <= 0:
+            return mods  # ya terminó: su estado final, en el acto
+        return f"\\t({max(0, t1)},{t2},{mods})"
+    texto = _T.sub(t, texto)
+
+    def mv(m):
+        x1, y1, x2, y2 = (float(g) for g in m.groups())
+        k = min(1.0, off_ms / dur_ms) if dur_ms > 0 else 1.0
+        return f"\\move({_num(x1 + (x2 - x1) * k)},{_num(y1 + (y2 - y1) * k)},{_num(x2)},{_num(y2)})"
+    return _MOVE.sub(mv, texto)
+
+
 def recortar_ass(texto, inicios):
     """Cada evento de subtítulos o gráficos empieza en el segundo de su capa (o se quita si su capa no está)."""
     out = []
@@ -89,6 +114,7 @@ def recortar_ass(texto, inicios):
             continue
         if ini < t0:
             p[1] = tiempo_ass(t0)
+            p[9] = _correr_animaciones(p[9], int(round((t0 - ini) * 1000)), int(round((fin - ini) * 1000)))
         out.append(",".join(p))
     return "\n".join(out) + "\n"
 

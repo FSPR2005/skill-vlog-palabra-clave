@@ -49,7 +49,8 @@ def agrupar_frases(palabras, max_palabras=4, pausa=0.35, unidas=frozenset()):
             frases.append(actual)
             actual = []
         actual.append(w)
-        if w["p"].rstrip().endswith((".", "?", "!", "…", ",")):
+        sigue_unida = i + 1 < len(palabras) and id(palabras[i + 1]) in unidas
+        if w["p"].rstrip().endswith((".", "?", "!", "…", ",")) and not sigue_unida:
             frases.append(actual)
             actual = []
     if actual:
@@ -189,16 +190,23 @@ def maquetar_frase(frase, i_clave, est, variante=0, x0=None, y0=None, resaltadas
     return out
 
 
-def eventos_frases(palabras, est, claves=None, posiciones=(), resaltar=()):
+def ids_resaltados(todas, resaltar):
+    """(ids de las palabras resaltadas, ids de las que no se separan de la anterior), buscando en `todas`."""
+    coinc = coincidencias_resaltadas(todas, resaltar)
+    return ({id(todas[i]) for m in coinc for i in m},
+            {id(todas[i]) for m in coinc for i in range(m[0] + 1, m[-1] + 1)})
+
+
+def eventos_frases(palabras, est, claves=None, posiciones=(), resaltar=(), todas=None):
     """[{texto, x, y, estilo, ini, fin}]: cada palabra entra en su segundo y sale al final de su frase.
 
     Una frase con palabras resaltadas no lleva clave pastel: el resaltado ya es su énfasis.
+    todas: la transcripción completa (los mismos objetos) donde se buscan las secuencias a resaltar, para que quitar
+    palabras (palabra_suelta) no junte palabras que no van seguidas. Por omisión, `palabras`.
     """
     f = est["subtitulos"]["frases"]
     hueco = est["subtitulos"]["hueco_max"]
-    coinc = coincidencias_resaltadas(palabras, resaltar)
-    res_ids = {id(palabras[i]) for m in coinc for i in m}
-    unidas = {id(palabras[i]) for m in coinc for i in range(m[0] + 1, m[-1] + 1)}
+    res_ids, unidas = ids_resaltados(palabras if todas is None else todas, resaltar)
     frases = agrupar_frases(palabras, f["max_palabras"], f["pausa"], unidas)
     ev = []
     variante = 0

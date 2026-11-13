@@ -126,3 +126,30 @@ def test_render_con_resaltado(tmp_path):
                  "--palabras", str(tmp_path / "p.json"), "--estilo", str(tmp_path / "mini.json"),
                  "--textos", str(tmp_path / "t.json"), "--sin-cortes"]) == 0
     assert ",Resaltado,," in (tmp_path / "tr" / "textos.ass").read_text(encoding="utf-8")
+
+
+# --- hallazgos de la auditoría de Codex (2026-11-13) ---
+
+def test_puntuacion_no_parte_una_secuencia_resaltada():
+    est = cargar_estilo(None)
+    ev = eventos_frases(P(("hola,", 0, .3), ("mundo", .35, .7)), est, resaltar=["hola mundo"])
+    res = [e for e in ev if e["estilo"] == "Resaltado"]
+    assert [e["texto"] for e in res] == ["HOLA", "MUNDO"] and res[0]["fin"] == res[1]["fin"]
+
+
+def test_palabra_suelta_no_inventa_secuencias():
+    est = cargar_estilo(None)
+    est["subtitulos"]["modo"] = "frases"
+    pal = P(("hola", 0, .3), ("otro", 1.0, 1.3), ("mundo", 2.0, 2.3))
+    ass = generar_ass(pal, est, palabra_suelta=[[0.9, 1.5]], resaltar=["hola mundo"])
+    assert ",Resaltado,," not in ass
+
+
+def test_modo_palabra_no_contagia_el_resaltado_por_tiempo():
+    est = cargar_estilo(None)
+    est["subtitulos"]["modo"] = "frases"
+    pal = P(("uno", 0, .8), ("dos", 1, 1.8), ("tres", 2, 2.8))
+    ass = generar_ass(pal, est, palabra_suelta=[[0, 1], [2, 3]], resaltar=["dos"])
+    d = [l for l in ass.splitlines() if l.startswith("Dialogue:")]
+    assert not any(",Resaltado,," in l and l.endswith("UNO") for l in d)
+    assert any(",Resaltado,," in l and l.endswith("DOS") for l in d)
