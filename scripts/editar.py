@@ -3,6 +3,8 @@
   python scripts/editar.py comprobar
   python scripts/editar.py preparar crudo.mp4 --trabajo carpeta          # transcribe, calcula cortes y escribe guion.txt
   python scripts/editar.py render   crudo.mp4 --salida editado.mp4 --trabajo carpeta [--textos textos.json]
+  python scripts/editar.py antes-despues crudo.mp4 --salida comparacion.mp4 --trabajo carpeta [las mismas]
+        # el clip crudo que se va editando por capas, con la barra de capas (estilo.json: antes_despues)
                                     [--musica pista.mp3] [--estilo mio.json] [--sin-cortes] [--palabras p.json]
                                     [--modelo small] [--idioma es] [--desde S --hasta S]
 
@@ -150,61 +152,124 @@ def preparar(a, est):
     return trabajo, tramos, pal_ed, hay_audio, dur
 
 
+def _plan_antes_despues(a, est, textos, pal_ed, dur_ed):
+    """Capas con material y su segundo de entrada; avisa de las que se quitan."""
+    from antes_despues import capas_con_material, tiempos_capas, inicios_por_tipo
+    disponibles = {"zoom"}
+    if pal_ed and est["subtitulos"]["activar"]:
+        disponibles.add("subtitulos")
+    if est["color"]["activar"]:
+        disponibles.add("color")
+    if textos.get("titulos") or textos.get("notas") or textos.get("apoyos"):
+        disponibles.add("graficos")
+    if a.musica:
+        disponibles.add("musica")
+    capas, fuera = capas_con_material(est["antes_despues"]["capas"], disponibles)
+    for nombre in fuera:
+        print(f"AVISO: la capa «{nombre}» no tiene material (sin --musica, sin títulos/notas/apoyos o sin voz) "
+              "y no sale en la barra")
+    capas_t = tiempos_capas(capas, dur_ed)
+    print("capas: " + ", ".join(f"{c['nombre']} {c['ini']:.2f} s" for c in capas_t))
+    return capas_t, inicios_por_tipo(capas_t)
+
+
 def render(a, est):
     trabajo, tramos, pal_ed, hay_audio, dur = preparar(a, est)
+    ad = a.accion == "antes-despues"
+    dur_ed = duracion_total(tramos)
     textos = {"titulos": [], "notas": []}
     if a.textos:
         with open(a.textos, encoding="utf-8") as f:
             textos.update(json.load(f))
+    capas_t, inicios = _plan_antes_despues(a, est, textos, pal_ed, dur_ed) if ad else (None, {})
     # fuentes y .ass junto al trabajo: el filtro ass de ffmpeg no acepta rutas C:\... (se corre con cwd=trabajo)
     dest_f = os.path.join(trabajo, "fuentes")
     os.makedirs(dest_f, exist_ok=True)
     for f in os.listdir(FUENTES):
         if f.lower().endswith((".ttf", ".otf")):
             shutil.copy2(os.path.join(FUENTES, f), dest_f)
+    ass = generar_ass(pal_ed, est, textos.get("titulos", []), textos.get("notas", []), textos.get("claves"),
+                      textos.get("palabra_suelta", []), textos.get("posiciones", []))
+    if ad:
+        from antes_despues import recortar_ass
+        ass = recortar_ass(ass, inicios)
     with open(os.path.join(trabajo, "textos.ass"), "w", encoding="utf-8") as f:
-        f.write(generar_ass(pal_ed, est, textos.get("titulos", []), textos.get("notas", []), textos.get("claves"),
-                            textos.get("palabra_suelta", []), textos.get("posiciones", [])))
+        f.write(ass)
     entero = len(tramos) == 1 and tramos[0][0] == 0 and abs(tramos[0][1] - dur) < 1 / est['salida']['fps']
     usar_tramos = None if entero else tramos
     s = est["salida"]
+    musica = a.musica if not ad or "musica" in inicios else None
     entradas = ["-i", os.path.abspath(a.video)]
-    if a.musica:
-        entradas += ["-stream_loop", "-1", "-i", os.path.abspath(a.musica)]
+    if musica:
+        entradas += ["-stream_loop", "-1", "-i", os.path.abspath(musica)]
     # tomas de apoyo: tapan la imagen en [ini, fin] del video editado; la voz sigue
-    apoyos, apoyos_hdr = [], []
+    apoyos, apoyos_hdr, apoyos_usados = [], [], []
     base_txt = os.path.dirname(os.path.abspath(a.textos)) if a.textos else os.getcwd()
-    for k, ap_ in enumerate(textos.get("apoyos", [])):
+    for ap_ in textos.get("apoyos", []):
+        ini, fin, desde = float(ap_["ini"]), float(ap_["fin"]), float(ap_.get("desde", 0))
+        if ad:  # en antes-despues las tomas de apoyo son de la capa de gráficos
+            t0 = inicios.get("graficos")
+            if t0 is None or fin <= t0:
+                continue
+            if ini < t0:
+                desde, ini = desde + (t0 - ini), t0
         ruta = ap_["archivo"]
         if not os.path.isabs(ruta) and not os.path.exists(ruta):
             ruta = os.path.join(base_txt, ruta)  # relativa a la carpeta de textos.json
         ruta = os.path.abspath(ruta)  # ffmpeg corre con cwd=trabajo
         if not os.path.exists(ruta):
             raise SystemExit(f"no existe la toma de apoyo: {ruta}")
-        largo = float(ap_["fin"]) - float(ap_["ini"])
-        entradas += ["-ss", str(float(ap_.get("desde", 0))), "-t", f"{largo + 0.1:.3f}", "-an", "-i", ruta]
-        apoyos.append((1 + bool(a.musica) + k, float(ap_["ini"]), float(ap_["fin"])))
+        entradas += ["-ss", str(desde), "-t", f"{fin - ini + 0.1:.3f}", "-an", "-i", ruta]
+        apoyos.append((1 + bool(musica) + len(apoyos), ini, fin))
         apoyos_hdr.append(_es_hdr(ruta))
+        apoyos_usados.append(dict(ap_, ini=ini, fin=fin, desde=desde))
     hdr = _es_hdr(a.video)
     if hdr:
         print("video HDR: se convierte a SDR (BT.709) con zscale + tonemap")
     color_filtro = None
-    if est["color"]["activar"] and est["color"]["modo"] == "auto":
+    if est["color"]["activar"] and est["color"]["modo"] == "auto" and (not ad or "color" in inicios):
         from color import medir_color, ajuste_color
         from render import TONEMAP
         medido = medir_color(os.path.abspath(a.video), 8, tramos[0][0], tramos[-1][1], TONEMAP if hdr else None)
         color_filtro = ajuste_color(medido, est["color"]["objetivo"])
         with open(os.path.join(trabajo, "color.json"), "w", encoding="utf-8") as f:
             json.dump({"medido": medido, "objetivo": est["color"]["objetivo"], "filtro": color_filtro}, f, indent=1)
+    est_v, zoom, marco = est, None, None
+    if ad:
+        import copy
+        from antes_despues import con_enable, cortes_editados, intervalos_zoom, geometria, marco_ass
+        c = est["color"]
+        if c["activar"] and c["modo"] == "fijo" and "color" in inicios:
+            color_filtro = (f"eq=brightness={c['brillo']}:contrast={c['contraste']}:saturation={c['saturacion']}:"
+                            f"gamma={c['gamma']}")
+        if color_filtro:
+            color_filtro = con_enable(color_filtro, inicios["color"])
+        est_v = copy.deepcopy(est)
+        est_v["color"]["activar"] = False  # el color va en color_filtro, prendido desde su capa
+        if "zoom" in inicios:
+            zoom = {"factor": est["zoom"]["factor"],
+                    "intervalos": intervalos_zoom(cortes_editados(tramos), dur_ed, est["zoom"]["periodo"],
+                                                  inicios["zoom"])}
+        with open(os.path.join(trabajo, "marco.ass"), "w", encoding="utf-8") as f:
+            f.write(marco_ass(est, capas_t, dur_ed))
+        marco = dict(geometria(est), ass="marco.ass", fondo=est["antes_despues"]["fondo"], dur=dur_ed)
+        with open(os.path.join(trabajo, "capas.json"), "w", encoding="utf-8") as f:
+            json.dump(capas_t, f, ensure_ascii=False, indent=1)
+    elif est["zoom"]["activar"]:
+        from antes_despues import cortes_editados, intervalos_zoom
+        zoom = {"factor": est["zoom"]["factor"],
+                "intervalos": intervalos_zoom(cortes_editados(tramos), dur_ed, est["zoom"]["periodo"])}
     with open(os.path.join(trabajo, "apoyos.json"), "w", encoding="utf-8") as f:
-        dur_ed = duracion_total(tramos)
-        json.dump([x for x in textos.get("apoyos", []) if float(x["ini"]) < dur_ed], f, ensure_ascii=False, indent=0)
-    fv = filtro_video(est, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro, hdr, apoyos_hdr)
+        json.dump([x for x in apoyos_usados if float(x["ini"]) < dur_ed], f, ensure_ascii=False, indent=0)
+    fv = filtro_video(est_v, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro, hdr, apoyos_hdr, zoom, marco)
+    musica_desde = inicios.get("musica") if ad else None
     if hay_audio:
-        fa = filtro_audio(est, usar_tramos, hay_musica=bool(a.musica))
+        fa = filtro_audio(est, usar_tramos, hay_musica=bool(musica), musica_desde=musica_desde)
     else:
-        fa = (f"anullsrc=r=48000:cl=mono,atrim=0:{duracion_total(tramos):.3f}[aout]" if not a.musica else
-              f"[1:a]aresample=48000,volume={est['audio']['musica_db']}dB,atrim=0:{duracion_total(tramos):.3f}[aout]")
+        from render import compuerta_musica
+        fa = (f"anullsrc=r=48000:cl=mono,atrim=0:{dur_ed:.3f}[aout]" if not musica else
+              f"[1:a]aresample=48000,volume={est['audio']['musica_db']}dB{compuerta_musica(musica_desde)},"
+              f"atrim=0:{dur_ed:.3f}[aout]")
     grafo = fv + ";" + fa
     with open(os.path.join(trabajo, "filtro.txt"), "w", encoding="utf-8") as f:
         f.write(grafo)
@@ -222,7 +287,7 @@ def render(a, est):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("accion", choices=["comprobar", "preparar", "render"])
+    ap.add_argument("accion", choices=["comprobar", "preparar", "render", "antes-despues"])
     ap.add_argument("video", nargs="?")
     ap.add_argument("--salida", default="editado.mp4")
     ap.add_argument("--trabajo", default="trabajo-edicion")

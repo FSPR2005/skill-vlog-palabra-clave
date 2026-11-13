@@ -38,8 +38,14 @@ def _encuadre(entrada, W, H, fps, hdr=False):
             "setsar=1"]
 
 
-def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=False, apoyos_hdr=()):
-    """apoyos: [(índice de entrada ffmpeg, ini, fin)] en segundos del video editado; tapan la imagen, no la voz."""
+def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=False, apoyos_hdr=(), zoom=None,
+                 marco=None):
+    """apoyos: [(índice de entrada ffmpeg, ini, fin)] en segundos del video editado; tapan la imagen, no la voz.
+
+    zoom: {"factor", "intervalos": [(ini, fin)]}: en esos tramos la imagen va acercada (zoom en salto), bajo el texto.
+    marco: {"ass", "x", "y", "w", "h", "fondo", "dur"}: modo antes-despues; el video editado se encoge a una tarjeta
+    sobre un fondo liso y encima se quema el .ass del marco (título, barra de capas).
+    """
     s = est["salida"]
     W, H, fps = s["ancho"], s["alto"], s["fps"]
     f = _encuadre("[0:v]", W, H, fps, hdr)
@@ -60,13 +66,26 @@ def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=Fa
         f.append(color_filtro)
     elif c["activar"] and c["modo"] == "fijo":
         f.append(f"eq=brightness={c['brillo']}:contrast={c['contraste']}:saturation={c['saturacion']}:gamma={c['gamma']}")
+    if zoom and zoom.get("intervalos"):
+        Wz, Hz = 2 * int(round(W * zoom["factor"] / 2)), 2 * int(round(H * zoom["factor"] / 2))
+        expr = "+".join(f"between(t,{a:.4f},{b:.4f})" for a, b in zoom["intervalos"])
+        cadenas += [",".join(f) + ",split[za][zb]", f"[zb]scale={Wz}:{Hz},crop={W}:{H}[zc]",
+                    f"[za][zc]overlay=0:0:enable='{expr}'[zoomed]"]
+        f = ["[zoomed]null"]
     if ass:
         f.append(f"ass={ass}" + (f":fontsdir={fuentes}" if fuentes else ""))
+    if marco:
+        m = marco
+        cadenas.append(",".join(f + [f"scale={m['w']}:{m['h']}", "setsar=1"]) + "[tarjeta]")
+        cadenas.append(f"color=c=0x{m['fondo'].lstrip('#')}:s={W}x{H}:r={fps}:d={m['dur']:.3f}[fondo]")
+        f = [f"[fondo][tarjeta]overlay={m['x']}:{m['y']}:shortest=1",
+             f"ass={m['ass']}" + (f":fontsdir={fuentes}" if fuentes else "")]
     f.append("format=yuv420p[vout]")
     return ";".join(cadenas + [",".join(f)])
 
 
-def filtro_audio(est, tramos, hay_musica=False):
+def filtro_audio(est, tramos, hay_musica=False, musica_desde=None):
+    """musica_desde: segundo en que entra la música (antes va en silencio); None = desde el principio."""
     a = est["audio"]
     fps = est["salida"]["fps"]
     # async + first_pts=0: respeta un audio que no empieza en 0 (rellena) antes de partirlo en paquetes por cuadro
@@ -78,10 +97,15 @@ def filtro_audio(est, tramos, hay_musica=False):
     if not hay_musica:
         return ",".join(voz) + "[aout]"
     partes = [",".join(voz) + ",asplit=2[voz][llave]",
-              f"[1:a]aresample=48000,volume={a['musica_db']}dB[mus0]"]
+              f"[1:a]aresample=48000,volume={a['musica_db']}dB{compuerta_musica(musica_desde)}[mus0]"]
     if a["ducking"]:
         partes.append("[mus0][llave]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=350[mus]")
     else:
         partes.append("[llave]anullsink;[mus0]anull[mus]")
     partes.append("[voz][mus]amix=inputs=2:duration=first:normalize=0[aout]")
     return ";".join(partes)
+
+
+def compuerta_musica(desde):
+    """Silencia la música antes de `desde` (filtro con timeline); "" si entra desde el principio."""
+    return f",volume=0:enable='lt(t,{desde:.4f})'" if desde else ""
