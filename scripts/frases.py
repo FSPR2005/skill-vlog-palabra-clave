@@ -41,10 +41,11 @@ def ancho_texto(texto, fuente, tamano):
     return f.getlength(texto) / 200 * tamano * k
 
 
-def agrupar_frases(palabras, max_palabras=4, pausa=0.35):
+def agrupar_frases(palabras, max_palabras=4, pausa=0.35, unidas=frozenset()):
+    """unidas: id() de palabras que no se separan de la anterior (una secuencia resaltada no se parte)."""
     frases, actual = [], []
     for i, w in enumerate(palabras):
-        if actual and (w["ini"] - actual[-1]["fin"] > pausa or len(actual) >= max_palabras):
+        if actual and id(w) not in unidas and (w["ini"] - actual[-1]["fin"] > pausa or len(actual) >= max_palabras):
             frases.append(actual)
             actual = []
         actual.append(w)
@@ -89,9 +90,14 @@ def indices_resaltados(palabras, resaltar):
     Una entrada de varias palabras solo coincide con esas palabras seguidas (así "a" no se resalta suelta); ini/fin
     (segundos del video editado) limitan dónde vale. Se compara sin signos ni mayúsculas.
     """
+    return {i for m in coincidencias_resaltadas(palabras, resaltar) for i in m}
+
+
+def coincidencias_resaltadas(palabras, resaltar):
+    """[[índices de una coincidencia], ...] (ver indices_resaltados)."""
     limpias = [(i, _limpia(w["p"])) for i, w in enumerate(palabras)]
     limpias = [(i, p) for i, p in limpias if p]
-    out = set()
+    out = []
     for r in resaltar or ():
         if isinstance(r, dict):
             sec, ini, fin = _secuencia(r.get("texto", "")), r.get("ini"), r.get("fin")
@@ -105,7 +111,7 @@ def indices_resaltados(palabras, resaltar):
                 idx = [i for i, _ in limpias[k:k + n]]
                 t = palabras[idx[0]]["ini"]
                 if (ini is None or t >= ini) and (fin is None or t < fin):
-                    out.update(idx)
+                    out.append(idx)
     return out
 
 
@@ -190,8 +196,10 @@ def eventos_frases(palabras, est, claves=None, posiciones=(), resaltar=()):
     """
     f = est["subtitulos"]["frases"]
     hueco = est["subtitulos"]["hueco_max"]
-    res_ids = {id(palabras[i]) for i in indices_resaltados(palabras, resaltar)}
-    frases = agrupar_frases(palabras, f["max_palabras"], f["pausa"])
+    coinc = coincidencias_resaltadas(palabras, resaltar)
+    res_ids = {id(palabras[i]) for m in coinc for i in m}
+    unidas = {id(palabras[i]) for m in coinc for i in range(m[0] + 1, m[-1] + 1)}
+    frases = agrupar_frases(palabras, f["max_palabras"], f["pausa"], unidas)
     ev = []
     variante = 0
     for k, fr in enumerate(frases):

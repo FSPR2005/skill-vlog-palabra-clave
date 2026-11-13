@@ -65,6 +65,16 @@ def test_frase_con_resaltado_no_lleva_clave_pastel():
     assert sum(e["estilo"] == "Resaltado" for e in ev) == 1
 
 
+def test_secuencia_resaltada_no_se_parte_entre_dos_frases():
+    est = cargar_estilo(None)
+    # 4 palabras por frase: «tu» sería la 4.ª y «predial» abriría la siguiente
+    pal = P(("si", 0, .2), ("de", .2, .3), ("la", .3, .4), ("tu", .4, .5), ("predial", .5, .9), ("hoy", .9, 1.1))
+    ev = eventos_frases(pal, est, claves=None, resaltar=["tu predial"])
+    res = [e for e in ev if e["estilo"] == "Resaltado"]
+    assert [e["texto"] for e in res] == ["TU", "PREDIAL"]
+    assert res[0]["fin"] == res[1]["fin"]                    # salen juntas: misma frase
+
+
 def test_ass_en_modo_frases_pinta_el_resaltado_con_halo():
     est = cargar_estilo(None)
     est["subtitulos"]["modo"] = "frases"
