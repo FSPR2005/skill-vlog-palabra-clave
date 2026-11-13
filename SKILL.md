@@ -59,8 +59,10 @@ Reglas (salen de medir el estilo, ver `recetas/ESTILO.md`):
   no ves Y"); si el crudo arranca con silencio, los cortes lo quitan. El texto está en pantalla desde el cuadro 0. Un título de 2 líneas que diga el tema: `chico` (2-3
   palabras de entrada, en caligráfica) + `grande` (2-3 palabras, el tema). Dura 1.5-3 s. Si la persona saluda, una `nota`
   a mano de 1 s ("hola :)") cerca de la cabeza. El primer corte cae antes de los 3 s (los scripts lo hacen si hay pausa).
-- **Gancho con cifra, 0 a 8 s** (cuando la persona cuenta un resultado propio): una pregunta en los primeros 3 s
-  ("¿qué pasa si...?") y la cifra del resultado antes de los 8 s ("lo probé un mes: de X a Y"). La cifra tiene que ser
+- **Gancho con cifra, 0 a 8 s** (cuando la persona cuenta un resultado propio): en los primeros 3 s, una pregunta
+  ("¿qué pasa si...?") **o** una afirmación ("lo probé un mes y pasó esto"), y la cifra del resultado antes de los 8 s
+  ("de X a Y"). Ninguna de las dos aperturas es mejor por regla: en algunas cuentas abrir con pregunta retiene menos a
+  los 3 s. Si la persona tiene datos de sus videos, se prueban las dos (A/B) y se queda la que retenga más. La cifra tiene que ser
   verdadera y verificable: la dice la persona en el crudo y tiene una fuente que ella puede mostrar (captura de sus
   estadísticas, reporte, factura). No la inventes, no la redondees hacia arriba ni la tomes de otro video; si no hay
   cifra comprobable, el gancho va sin cifra (pregunta o contraste) y se lo dices. En pantalla, la cifra va en
