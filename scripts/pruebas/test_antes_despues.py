@@ -191,7 +191,16 @@ def _uno(linea, inicios):
 
 def test_recortar_quita_la_entrada_ya_pasada_y_conserva_la_salida():
     l = _uno(r"Dialogue: 2,0:00:00.00,0:00:05.00,TituloGrande,,0,0,0,,{\pos(1,2)\fad(1000,300)}t", {"graficos": 3.0})
-    assert r"\fad(0,300)" in l and l.split(",")[1] == "0:00:03.00"
+    # \fade con tiempos relativos al nuevo inicio (libass acepta negativos): la salida sigue donde estaba
+    assert r"\fade(255,0,255,-3000,-2000,1700,2000)" in l and r"\fad(" not in l
+    assert l.split(",")[1] == "0:00:03.00"
+
+
+def test_recortar_a_mitad_del_fundido_conserva_su_opacidad():
+    l = _uno(r"Dialogue: 2,0:00:00.00,0:00:02.00,Nota,,0,0,0,,{\fad(1000,0)}n", {"graficos": 0.5})
+    assert r"\fade(255,0,255,-500,500,1500,1500)" in l
+    l = _uno(r"Dialogue: 2,0:00:00.00,0:00:02.00,Nota,,0,0,0,,{\fad(0,1000)}n", {"graficos": 1.5})
+    assert r"\fade(255,0,255,-1500,-1500,-500,500)" in l
 
 
 def test_recortar_aplica_el_final_de_un_pop_que_ya_termino():
@@ -202,6 +211,6 @@ def test_recortar_aplica_el_final_de_un_pop_que_ya_termino():
 
 def test_recortar_corre_un_pop_a_medias_y_un_move():
     l = _uno(r"Dialogue: 1,0:00:00.90,0:00:01.50,Palabra,,0,0,0,,{\pos(5,5)\t(0,300,\fscx100)}x", {"subtitulos": 1.0})
-    assert r"\t(0,200,\fscx100)" in l
+    assert r"\t(-100,200,\fscx100)" in l      # sigue la interpolación donde iba (no la reinicia)
     l = _uno(r"Dialogue: 3,0:00:00.00,0:00:02.00,Nota,,0,0,0,,{\move(0,0,100,0)}n", {"graficos": 1.0})
     assert r"\move(50,0,100,0)" in l

@@ -79,14 +79,21 @@ _MOVE = re.compile(r"\\move\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)\)")
 
 
 def _correr_animaciones(texto, off_ms, dur_ms):
-    """El evento ahora empieza off_ms más tarde: la entrada ya pasó, \\t y \\move siguen donde iban."""
-    texto = _FAD.sub(lambda m: f"\\fad(0,{m.group(2)})", texto)
+    """El evento ahora empieza off_ms más tarde y dura dur_ms - off_ms: cada animación sigue donde iba.
+
+    \\fad y \\t pasan a tiempos relativos al nuevo inicio, que pueden ser negativos (libass los acepta: medido,
+    \\fscx50\\t(-500,500,\\fscx100) en el cuadro 0 dibuja la escala 75; \\fade con t1 negativo, la opacidad intermedia).
+    """
+    def fad(m):
+        a, b = int(m.group(1)), int(m.group(2))
+        return f"\\fade(255,0,255,{-off_ms},{a - off_ms},{dur_ms - b - off_ms},{dur_ms - off_ms})"
+    texto = _FAD.sub(fad, texto)
 
     def t(m):
         t1, t2, mods = int(m.group(1)) - off_ms, int(m.group(2)) - off_ms, m.group(3)
         if t2 <= 0:
             return mods  # ya terminó: su estado final, en el acto
-        return f"\\t({max(0, t1)},{t2},{mods})"
+        return f"\\t({t1},{t2},{mods})"
     texto = _T.sub(t, texto)
 
     def mv(m):
