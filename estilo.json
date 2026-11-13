@@ -68,6 +68,20 @@
         }
       ]
     },
+    "resaltado": {
+      "_nota": "Palabras elegidas (textos.json: resaltar) dentro de la frase que se ve. modo color: letra de color con halo; modo fondo: caja de color_fondo detrás y letra color_letra_fondo. La frase con resaltado no lleva clave pastel.",
+      "modo": "color",
+      "fuente": "Poppins ExtraBold",
+      "tamano": 104,
+      "mayusculas": true,
+      "color": "#F5F02A",
+      "brillo": 8,
+      "color_brillo": "#F5F02A",
+      "opacidad_brillo": 0.45,
+      "color_fondo": "#FFE600",
+      "color_letra_fondo": "#111111",
+      "relleno": 12
+    },
     "palabra": {
       "palabras_por_bloque": 1,
       "fuente": "Poppins SemiBold",

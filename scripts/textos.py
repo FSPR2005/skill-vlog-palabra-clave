@@ -2,6 +2,7 @@
 
 - Frase / ClaveN: subtítulo que se arma palabra por palabra (ver frases.py), el modo principal.
 - Palabra: UNA palabra chica y blanca al centro que cambia con la voz (tomas de apoyo).
+- Resaltado: palabras elegidas (textos.json: resaltar) dentro de la frase, en color con halo o sobre una caja.
 - TituloChico + TituloGrande: el título del gancho; una línea chica en letra caligráfica y color pastel,
   encima y a la izquierda de una línea grande en sans negrita blanca.
 - Nota: comentario escrito a mano, girado, cerca de la cabeza.
@@ -51,9 +52,10 @@ def _escapar(texto):
     return texto.replace("\\", "").replace("{", "(").replace("}", ")").replace("\n", "\\N")
 
 
-def _estilo(nombre, fuente, tamano, color, sombra_col, sombra, alin=5, contorno=0, col_contorno="#000000"):
+def _estilo(nombre, fuente, tamano, color, sombra_col, sombra, alin=5, contorno=0, col_contorno="#000000", borde=1):
+    """borde=3: caja opaca del color del contorno detrás del texto (contorno = relleno de la caja)."""
     return (f"Style: {nombre},{fuente},{tamano},{color_ass(color)},&H000000FF,{color_ass(col_contorno)},{sombra_col},"
-            f"0,0,0,0,100,100,0,0,1,{contorno},{sombra},{alin},0,0,0,1")
+            f"0,0,0,0,100,100,0,0,{borde},{contorno},{sombra},{alin},0,0,0,1")
 
 
 def _encoger(texto, fuente, tamano, ancho_max=0.9 * 1080):
@@ -85,12 +87,13 @@ def _en_tramos(t, tramos):
     return any(a <= t < b for a, b in tramos)
 
 
-def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_suelta=(), posiciones=()):
+def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_suelta=(), posiciones=(), resaltar=()):
     """palabras ya en la línea de tiempo del video editado. Devuelve el texto del .ass.
 
     palabra_suelta: [[ini, fin]] donde se usa el modo de una palabra al centro (tomas de apoyo) en vez de frases.
+    resaltar: palabras o secuencias que van con el estilo Resaltado dentro de la frase (ver frases.indices_resaltados).
     """
-    from frases import eventos_frases
+    from frases import eventos_frases, indices_resaltados
     W, H = 1080, 1920
     s, t, n = estilo["subtitulos"], estilo["titulo"], estilo["notas"]
     fr, pa = s["frases"], s["palabra"]
@@ -99,6 +102,22 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
                _estilo("Frase", fr["fuente"], fr["tamano"], fr["color"], sc, s["sombra"], alin=7)]
     for i, c in enumerate(fr["claves"]):
         estilos.append(_estilo(f"Clave{i}", c["fuente"], c["tamano"], c["color"], sc, s["sombra"], alin=7))
+    rs = s["resaltado"]
+    if rs["modo"] not in ("color", "fondo"):
+        raise ValueError("subtitulos.resaltado.modo debe ser «color» o «fondo»")
+    con_caja = rs["modo"] == "fondo"
+    if con_caja:
+        estilos.append(_estilo("Resaltado", rs["fuente"], rs["tamano"], rs["color_letra_fondo"], sc, 0, alin=7,
+                               contorno=rs["relleno"], col_contorno=rs["color_fondo"], borde=3))
+    else:
+        estilos.append(_estilo("Resaltado", rs["fuente"], rs["tamano"], rs["color"], sc, s["sombra"], alin=7))
+    k_res = {"color": rs["color"], "brillo": rs["brillo"], "color_brillo": rs["color_brillo"],
+             "opacidad_brillo": rs["opacidad_brillo"]}
+
+    def _resaltado(ini, fin, etiquetas, texto):
+        if con_caja:  # sin \bord0: en la caja (BorderStyle 3) el borde es el relleno
+            return [f"Dialogue: 1,{tiempo_ass(ini)},{tiempo_ass(fin)},Resaltado,,0,0,0,,{{{etiquetas}}}{_escapar(texto)}"]
+        return _con_halo(ini, fin, "Resaltado", etiquetas, texto, k_res)
     estilos += [_estilo("TituloChico", t["fuente_chica"], t["tamano_chica"], t["color_chica"], sc, t["sombra"]),
                 _estilo("TituloGrande", t["fuente_grande"], t["tamano_grande"], t["color_grande"], sc, t["sombra"]),
                 _estilo("Nota", n["fuente"], n["tamano"], n["color"], sc, 1)]
@@ -124,25 +143,33 @@ def generar_ass(palabras, estilo, titulos=(), notas=(), claves=None, palabra_sue
         if pa["pop_ms"]:
             pop = f"\\fscx{pa['pop_desde']}\\fscy{pa['pop_desde']}\\t(0,{int(pa['pop_ms'])},\\fscx100\\fscy100)"
         cl = {limpiar_palabra(c, True) for c in (claves or [])}
+        t_res = [palabras[i]["ini"] for i in indices_resaltados(palabras, resaltar)]
         for b in bloques_de_palabras(sueltas, pa["palabras_por_bloque"], s["hueco_max"], s["minusculas"]):
             if b["fin"] - b["ini"] < 0.01:
                 continue
+            es_res = any(abs(t - b["ini"]) < 1e-6 or b["ini"] <= t < b["fin"] for t in t_res)
             px, py = x, y
             if _en_tramos(b["ini"], palabra_suelta):
                 py = int(H * pa["posicion_y_apoyo"])
             for pos in posiciones:
                 if pos["ini"] <= b["ini"] < pos["fin"]:
                     px, py = int(W * pos["x"]), int(H * pos["y"])
-            if cl and b["texto"].lower() in cl and fr["claves"]:
+            if es_res:
+                txt = b["texto"].upper() if rs["mayusculas"] else b["texto"]
+                ev += _resaltado(b["ini"], b["fin"], f"\\pos({px},{py})\\an5"
+                                 + _encoger(txt, rs["fuente"], rs["tamano"]), txt)
+            elif cl and b["texto"].lower() in cl and fr["claves"]:
                 k = fr["claves"][0]
                 ev += _con_halo(b["ini"], b["fin"], "Clave0", f"\\pos({px},{py})\\an5"
                                 + _encoger(b["texto"], k["fuente"], k["tamano"]), b["texto"], k)
             else:
                 ev.append(f"Dialogue: 1,{tiempo_ass(b['ini'])},{tiempo_ass(b['fin'])},Palabra,,0,0,0,,"
                           f"{{\\pos({px},{py}){pop}}}{_escapar(b['texto'])}")
-        for e in eventos_frases(en_frase, estilo, claves, posiciones):
+        for e in eventos_frases(en_frase, estilo, claves, posiciones, resaltar):
             esc = f"\\fscx{e['escala']}\\fscy{e['escala']}" if e.get("escala", 100) < 100 else ""
-            if e["estilo"].startswith("Clave"):
+            if e["estilo"] == "Resaltado":
+                ev += _resaltado(e["ini"], e["fin"], f"\\pos({e['x']},{e['y']}){esc}", e["texto"])
+            elif e["estilo"].startswith("Clave"):
                 k = fr["claves"][int(e["estilo"][5:])]
                 ev += _con_halo(e["ini"], e["fin"], e["estilo"], f"\\pos({e['x']},{e['y']}){esc}", e["texto"], k)
             else:

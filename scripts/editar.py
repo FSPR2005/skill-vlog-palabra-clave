@@ -11,7 +11,8 @@
 guion.txt y textos.json usan la línea de tiempo del video YA editado (después de los cortes). textos.json:
   {"titulos": [{"chico", "grande", "ini", "fin"}], "notas": [{"texto", "ini", "fin", "posicion_x", "posicion_y"}],
    "claves": ["palabra", ...], "palabra_suelta": [[ini, fin]], "posiciones": [{"ini", "fin", "x", "y"}],
-   "apoyos": [{"archivo", "desde", "ini", "fin"}]}
+   "apoyos": [{"archivo", "desde", "ini", "fin"}],
+   "resaltar": ["palabra", "varias palabras", {"texto", "ini", "fin"}]}
 """
 import argparse
 import json
@@ -189,7 +190,8 @@ def render(a, est):
         if f.lower().endswith((".ttf", ".otf")):
             shutil.copy2(os.path.join(FUENTES, f), dest_f)
     ass = generar_ass(pal_ed, est, textos.get("titulos", []), textos.get("notas", []), textos.get("claves"),
-                      textos.get("palabra_suelta", []), textos.get("posiciones", []))
+                      textos.get("palabra_suelta", []), textos.get("posiciones", []),
+                      textos.get("resaltar", []))
     if ad:
         from antes_despues import recortar_ass
         ass = recortar_ass(ass, inicios)
