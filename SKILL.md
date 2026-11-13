@@ -1,6 +1,6 @@
 ---
 name: vlog-palabra-clave
-description: Edita un video crudo (vertical u horizontal) con el estilo de vlog de estilo de vida que se ve en TikTok y Reels - cortes en salto que quitan las pausas, subtítulo de UNA palabra chica y blanca en el hueco sobre la cabeza, palabras clave grandes en color pastel con brillo suave, título de gancho en dos tipos de letra (caligráfica chica + sans negrita grande), notas escritas a mano, tomas de apoyo de 0.6-1.0 s y color luminoso con blancos suaves. Todo local y gratis (ffmpeg + faster-whisper), en Windows, Mac o Linux, con los parámetros en estilo.json. Úsala cuando el usuario diga "edita este video", "edítalo estilo vlog", "ponle subtítulos palabra por palabra", "quita las pausas y ponle textos", "edítalo como TikTok de lifestyle", "edita mi unboxing / haul / vlog / reseña", "déjalo listo para Reels", o suba un video crudo pidiendo editarlo con ese estilo.
+description: Edita un video crudo (vertical u horizontal) con el estilo de vlog de estilo de vida que se ve en TikTok y Reels - cortes en salto que quitan las pausas, subtítulo de UNA palabra chica y blanca en el hueco sobre la cabeza, palabras clave grandes en color pastel con brillo suave, título de gancho en dos tipos de letra (caligráfica chica + sans negrita grande), notas escritas a mano, tomas de apoyo de 0.6-1.0 s y color luminoso con blancos suaves. Todo local y gratis (ffmpeg + faster-whisper), en Windows, Mac o Linux, con los parámetros en estilo.json. También resalta palabras dentro de la frase y hace un antes y después por capas (el crudo que se va editando, con una barra de capas de colores). Úsala cuando el usuario diga "edita este video", "edítalo estilo vlog", "ponle subtítulos palabra por palabra", "quita las pausas y ponle textos", "edítalo como TikTok de lifestyle", "edita mi unboxing / haul / vlog / reseña", "déjalo listo para Reels", "muéstrame el antes y después de la edición", o suba un video crudo pidiendo editarlo con ese estilo.
 ---
 
 # Vlog con palabra clave
@@ -44,7 +44,8 @@ Si el video es largo (más de 3 min) o la máquina tiene poca RAM, trabaja por p
   "palabra_suelta": [[6.2, 8.0]],
   "posiciones": [{"ini": 12.0, "fin": 15.5, "x": 0.5, "y": 0.85}],
   "apoyos": [{"archivo": "apoyo1.mp4", "desde": 0.0, "ini": 6.2, "fin": 6.9},
-             {"archivo": "apoyo2.mp4", "desde": 3.0, "ini": 6.9, "fin": 8.0}]
+             {"archivo": "apoyo2.mp4", "desde": 3.0, "ini": 6.9, "fin": 8.0}],
+  "resaltar": ["regalos sorpresa", {"texto": "veinte", "ini": 9.0, "fin": 12.0}]
 }
 ```
 
@@ -58,11 +59,23 @@ Reglas (salen de medir el estilo, ver `recetas/ESTILO.md`):
   no ves Y"); si el crudo arranca con silencio, los cortes lo quitan. El texto está en pantalla desde el cuadro 0. Un título de 2 líneas que diga el tema: `chico` (2-3
   palabras de entrada, en caligráfica) + `grande` (2-3 palabras, el tema). Dura 1.5-3 s. Si la persona saluda, una `nota`
   a mano de 1 s ("hola :)") cerca de la cabeza. El primer corte cae antes de los 3 s (los scripts lo hacen si hay pausa).
+- **Gancho con cifra, 0 a 8 s** (cuando la persona cuenta un resultado propio): una pregunta en los primeros 3 s
+  ("¿qué pasa si...?") y la cifra del resultado antes de los 8 s ("lo probé un mes: de X a Y"). La cifra tiene que ser
+  verdadera y verificable: la dice la persona en el crudo y tiene una fuente que ella puede mostrar (captura de sus
+  estadísticas, reporte, factura). No la inventes, no la redondees hacia arriba ni la tomes de otro video; si no hay
+  cifra comprobable, el gancho va sin cifra (pregunta o contraste) y se lo dices. En pantalla, la cifra va en
+  `resaltar` o en un `titulos`, con las mismas palabras que dijo.
 - **Claves**: UNA palabra cada 5-8 s, la que carga el sentido (sustantivo, número, adjetivo fuerte). Nunca muletillas,
   marcas de terceros ni nombres de personas. Salen grandes, en pastel y con brillo, en el lugar del subtítulo
   (su letra, tamaño y colores están en `subtitulos.frases.claves` de `estilo.json`: la `[0]` en modo palabra).
 - **Modo de subtítulo**: `subtitulos.modo` es `"palabra"` (una palabra a la vez, el del estilo) o `"frases"` (la frase se
   arma palabra por palabra en escalera, para un gancho tipo lista); se cambia con `--estilo`.
+- **Resaltar** (`resaltar`): 1 a 4 palabras seguidas dentro de la frase que se ve, para el tema del gancho o la cifra
+  ("pides a chat gpt", "30 mil"). Escríbelas como salen en `guion.txt` (sin importar signos ni mayúsculas); una
+  secuencia solo coincide completa, y `{"texto", "ini", "fin"}` la limita a un tramo. En modo `frases` la palabra se
+  queda en su renglón, en mayúsculas y amarilla con halo, y esa frase no lleva clave pastel; en modo `palabra` sale la
+  palabra sola resaltada. `subtitulos.resaltado.modo` = `"fondo"` la pone sobre una caja de color con letra oscura.
+  Como mucho una frase resaltada cada 5-8 s, igual que las claves.
 - **Notas a mano**: 1 o 2 en todo el video, para un aparte o una reacción ("nooo..", "mido 1.50"). Cerca del sujeto.
 - **Tomas de apoyo** (solo si el usuario las dio): cuando la voz describe algo, tapa la imagen con un clip de 0.6-1.0 s y
   encadena varios seguidos. Pon esos mismos rangos en `palabra_suelta`: ahí la palabra va a media pantalla (50 %).
@@ -89,6 +102,22 @@ para cortar menos, o `{"subtitulos": {"palabra": {"posicion_y": 0.25}}}` para su
 `--modelo base` (máquinas lentas), `--hilos 2` (poca RAM).
 `edicion/color.json` guarda lo medido en el crudo (`medido`), la meta del estilo (`objetivo`) y el filtro aplicado; si el
 color no convence, cambia `color.objetivo` con `--estilo` o pon `{"color": {"modo": "fijo"}}`.
+
+## 4b. Antes y después por capas (opcional, para mostrar la edición)
+
+```
+python <skill>/scripts/editar.py antes-despues crudo.mp4 --trabajo edicion --textos edicion/textos.json --salida edicion/antes_despues.mp4 [--musica pista.mp3] --hasta 15
+```
+El mismo clip, en una tarjeta con esquinas redondeadas sobre fondo claro y con el título "Original vs Editado", empieza
+crudo (sin color, sin texto) y se va editando por capas. Abajo corre una barra de bloques de colores bajo un cabezal
+fijo: Original (rojo), Subtítulos (amarillo; trae también el color), Zoom in y out (cian), Gráficos (naranja: títulos,
+notas y tomas de apoyo) y Música y SFX (verde: la pista de `--musica`). Cada capa se prende cuando el cabezal entra en
+su bloque; los bloques que faltan se ven tenues. Todo se cambia en `antes_despues` de `estilo.json` (título, colores,
+tamaños, `capas` con `nombre`, `color`, `tipos` y, si quieres, `ini` en segundos). Por omisión las capas se reparten
+parejo en la duración. Una capa sin material (p. ej. Música sin `--musica`) se quita de la barra con un aviso. El zoom
+es en salto: un tramo sí y otro no entre cortes (`zoom.factor`, `zoom.periodo`); en el render normal se prende con
+`{"zoom": {"activar": true}}`. Revisa la hoja con `revisar.py` como en el paso 4. Los SFX no se generan: si la pista de
+`--musica` los trae, suenan; si no, cambia el nombre de la capa a "Música".
 
 ## 5. Entregar
 

@@ -103,3 +103,34 @@ siempre dan pico): las cifras son un piso.
   destellos de luz de color entre tomas (1 video) y recortes de otra persona insertados como meme.
 - Burbujas de "responder comentario" de la app.
 - Las tomas de apoyo y la música: dependen del material que tenga el usuario.
+
+## 10. Antes y después por capas (otra referencia)
+
+Cómo se obtuvo: un reel público vertical de una agencia de contenido (14.75 s, 1080x1920, 60 cuadros/s), visto en 10
+cuadros cada 1.5 s. No se incluye nada de él: ni cuadros, ni voz, ni música, ni marca.
+
+- Medido: fondo gris claro casi blanco; título de dos palabras con "vs" en sans negrita gris oscuro, centrado al ~12 %
+  desde arriba; el video en una tarjeta de ~53 % del ancho (de 16 % a 68 % del alto) con esquinas redondeadas; debajo,
+  al ~72-78 % del alto, una fila de bloques de colores saturados con esquinas redondeadas y un brillo suave, con su
+  nombre abajo en sans chica oscura: rojo (original), amarillo (subtítulos), cian (zoom), naranja (gráficos) y verde
+  (música y efectos). La fila corre a la izquierda bajo una raya vertical fija al centro; el video empieza crudo y gana
+  color y subtítulos hacia los 3 s, gráficos hacia los 7 s.
+- En la skill: `editar.py antes-despues` con `antes_despues` de `estilo.json` (fondo #EEEEEB, `tarjeta_ancho` 0.53,
+  `barra_y` 0.722, bloques de 230x112 px); las capas se reparten parejo en la duración salvo que lleven `ini`, y los
+  bloques que aún no llegan se ven tenues (`opacidad_pendiente` 0.45; con 1.0 se ven todos llenos, como en el reel).
+- Diferencias: los gráficos del reel son interfaces de una app; aquí la capa de gráficos son tus títulos, notas y tomas
+  de apoyo. Los efectos de sonido no se generan. El zoom del reel no se midió cuadro a cuadro; aquí es en salto
+  (`zoom.factor` 1.12, un tramo sí y otro no).
+
+## 11. Palabras resaltadas y gancho con cifra (otra referencia)
+
+Cómo se obtuvo: un reel público vertical de captación (47 s, 1080x1920, 30 cuadros/s): tira de 5 cuadros entre 0.4 y
+2.4 s y la transcripción de los primeros 8 s. Tampoco se incluye nada de él.
+
+- Medido (0-2.4 s): la frase completa del gancho, en tres renglones centrados a media pantalla; el renglón del tema en
+  mayúsculas, sans muy negrita, amarillo con un halo amarillo suave; el resto en sans normal blanca con sombra.
+- Medido (0-8 s): una pregunta de 1 frase (0-3 s) y, antes de los 8 s, el resultado con dos cifras (vistas y
+  seguidores) en pantalla. Las cifras son dichos de quien habla: no se comprobaron.
+- En la skill: `resaltar` en `textos.json` (Poppins ExtraBold 104, mayúsculas, #F5F02A con halo; o caja con
+  `resaltado.modo = "fondo"`), y la regla "Gancho con cifra" del paso 3 de SKILL.md, que exige que la cifra sea
+  verdadera y verificable.

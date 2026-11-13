@@ -18,6 +18,9 @@ faster-whisper y Python.
 | **Notas a mano** ("hola :)") giradas junto a la cabeza | fuente manuscrita libre |
 | **Tomas de apoyo** de 0.6-1.0 s encima de la voz | si le das clips, se encadenan sin cortar el audio |
 | Color luminoso, blancos suaves (~222/255), poca saturación, un poco cálido | mide TU video y lo lleva a esas métricas (no es un LUT ajeno) |
+| **Resaltar** palabras dentro de la frase (amarillo con halo o sobre una caja de color) | `resaltar` en `textos.json`; `subtitulos.resaltado` en `estilo.json` |
+| **Antes y después por capas**: el clip crudo se va editando, con una barra de capas de colores bajo un cabezal | `editar.py antes-despues`; capas en `antes_despues` de `estilo.json` |
+| Zoom en salto (acercar y alejar entre cortes) | `zoom` en `estilo.json` (en el render normal, apagado por omisión) |
 | Voz normalizada a -14 LUFS y tu música (si tienes derechos) debajo, con *ducking* | ffmpeg `loudnorm` + `sidechaincompress` |
 
 Las medidas del estilo (ritmo de cortes, tamaños, posiciones, colores) y cómo se obtuvieron están en
@@ -57,6 +60,8 @@ python scripts/editar.py preparar crudo.mp4 --trabajo edicion          # transcr
 # escribe edicion/textos.json (título, claves, notas, tomas de apoyo): ver SKILL.md, paso 3
 python scripts/editar.py render crudo.mp4 --trabajo edicion --textos edicion/textos.json --salida editado.mp4
 python scripts/revisar.py editado.mp4 --trabajo edicion               # hoja de cuadros y ritmo de cortes
+# opcional: el mismo clip crudo que se va editando por capas, con la barra de capas
+python scripts/editar.py antes-despues crudo.mp4 --trabajo edicion --textos edicion/textos.json --salida antes_despues.mp4
 ```
 
 Opciones útiles: `--estilo mio.json` (solo las claves que cambias), `--musica pista.mp3`, `--sin-cortes`, `--hasta 15`
@@ -97,5 +102,7 @@ all parameters live in `estilo.json`.
 
 Install: clone into `~/.claude/skills/vlog-palabra-clave`, `pip install -r requirements.txt`, install ffmpeg, then run
 `python scripts/editar.py comprobar`. Ask Claude Code to "edit this video in vlog style". Manual use: `editar.py preparar`,
-write `textos.json`, `editar.py render`, `revisar.py`. Limits: no face effects, stickers or app transitions; it does not
+write `textos.json`, `editar.py render`, `revisar.py`. Extras: `resaltar` highlights chosen words inside the on-screen
+phrase, and `editar.py antes-despues` renders a before/after clip whose edit layers (captions, zoom, graphics, music)
+switch on one by one under a scrolling colored layer bar. Limits: no face effects, stickers or app transitions; it does not
 invent B-roll or music. Code under MIT; bundled fonts under SIL OFL 1.1.
