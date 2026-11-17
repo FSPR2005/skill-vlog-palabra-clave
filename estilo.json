@@ -157,6 +157,24 @@
     "mensaje": {"x": 0.5, "y": 0.7, "ancho": 0.78},
     "comentario": {"x": 0.5, "y": 0.68, "ancho": 0.78, "texto": "Comenta", "flecha": true}
   },
+  "flotantes": {
+    "_nota": "Ventanas de video flotantes (textos.json: flotantes): clips del usuario en recuadros con esquinas redondeadas, borde y sombra, alrededor de la persona; sin audio (la voz sigue). ancho: fracción del ancho; proporcion: ancho/alto. Las que no traen x, y toman lugares (centros, fracciones) en orden. cara: rectángulo (fracciones) que no deben tapar; si lo tapan, avisa.",
+    "maximo": 4,
+    "ancho": 0.26,
+    "proporcion": 0.75,
+    "radio": 30,
+    "borde": 6,
+    "color_borde": "#FFFFFF",
+    "sombra": 20,
+    "opacidad_sombra": 0.3,
+    "bajada_sombra": 10,
+    "pop_ms": 320,
+    "pop_desde": 0.5,
+    "salida_ms": 220,
+    "escalonado_ms": 150,
+    "lugares": [[0.16, 0.42], [0.84, 0.42], [0.16, 0.7], [0.84, 0.7]],
+    "cara": {"x": [0.3, 0.7], "y": [0.32, 0.6]}
+  },
   "antes_despues": {
     "_nota": "Modo antes-despues: el video va en una tarjeta y una barra de capas de colores corre bajo un cabezal fijo; cada capa se prende cuando el cabezal entra en su bloque. tipos: subtitulos, color, zoom, graficos (titulos, notas, apoyos), musica. Sin ini, las capas se reparten parejo en la duración; con ini, todas lo llevan, la primera en 0 y crecientes.",
     "fondo": "#EEEEEB",

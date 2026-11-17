@@ -2,6 +2,8 @@
 
 - tarjetas: interfaz animada (lista que se palomea, insignia tipo píldora, mensaje con avatar, barra de comentario
   con flecha hacia abajo). Bordes muy redondeados, sombra suave, entrada con escala (pop), salida con desvanecido.
+- flotantes: 1 a 4 clips del usuario en ventanas con esquinas redondeadas y sombra alrededor de la persona; entran con
+  pop (escalonados si entran juntos) y salen; sin audio: la voz principal sigue.
 
 Cada gráfico se dibuja cuadro por cuadro en un lienzo transparente chico (solo lo que ocupa, no la pantalla entera) y
 se guarda como un .mov con alfa (códec png) en <trabajo>/graficos/. render.filtro_video lo superpone en su segundo
@@ -344,7 +346,10 @@ def _lienzo_animado(base, caja, t, dur, an):
 
 
 def _desplazamiento(base):
-    bw, bh = base.size
+    return _desplazamiento_tam(*base.size)
+
+
+def _desplazamiento_tam(bw, bh):
     return (int(math.ceil(bw * HOLGURA)) - bw) // 2, (int(math.ceil(bh * HOLGURA)) - bh) // 2
 
 
@@ -448,4 +453,137 @@ def preparar_tarjetas(tarjetas, est, carpeta):
         escribir_sprite(cuadros_tarjeta(t, est, fps), ruta, fps)
         sprites.append({"archivo": ruta, "x": x - ox - caja[0], "y": y - oy - caja[1],
                         "ini": float(t["ini"]), "fin": float(t["fin"])})
+    return sprites
+
+
+# ---------------------------------------------------------------- flotantes
+
+def mascara_redondeada(w, h, radio):
+    """Máscara L de w x h con esquinas redondeadas (dibujada al doble y reducida: orilla suave)."""
+    m = Image.new("L", (w * SS, h * SS), 0)
+    ImageDraw.Draw(m).rounded_rectangle([0, 0, w * SS - 1, h * SS - 1], radius=max(0, radio) * SS, fill=255)
+    return m.resize((w, h), Image.LANCZOS)
+
+
+def _par(v):
+    return max(2, 2 * int(round(v / 2)))
+
+
+def _tam_flotante(f, est):
+    """(ancho, alto) del clip dentro de la ventana y grosor del borde, en px de salida."""
+    c = est["flotantes"]
+    W = est["salida"]["ancho"]
+    w = _par(W * float(f.get("ancho", c["ancho"])))
+    h = _par(w / float(f.get("proporcion", c["proporcion"])))
+    return w, h, int(round(c["borde"] * W / 1080))
+
+
+def cajas_flotantes(flotantes, est):
+    """Caja (x0, y0, x1, y1) de cada ventana (con borde) en px de salida. Las que no traen x, y toman los lugares
+    de estilo.json (a los lados de la persona) en orden. Avisa si una tapa la cara (flotantes.cara)."""
+    c = est["flotantes"]
+    W, H = est["salida"]["ancho"], est["salida"]["alto"]
+    lugares = iter(c["lugares"])
+    cajas = []
+    for f in flotantes:
+        w, h, b = _tam_flotante(f, est)
+        if "x" in f and "y" in f:
+            x, y = float(f["x"]), float(f["y"])
+        else:
+            x, y = next(lugares, (0.5, 0.75))
+        cx, cy = W * x, H * y
+        wo, ho = w + 2 * b, h + 2 * b
+        x0 = int(round(min(max(cx - wo / 2, 0), W - wo)))
+        y0 = int(round(min(max(cy - ho / 2, 0), H - ho)))
+        caja = (x0, y0, x0 + wo, y0 + ho)
+        cara = c["cara"]
+        if not (caja[2] <= cara["x"][0] * W or caja[0] >= cara["x"][1] * W or caja[3] <= cara["y"][0] * H
+                or caja[1] >= cara["y"][1] * H):
+            print(f"AVISO: el flotante «{f.get('archivo')}» de {f.get('ini', '?')} s tapa la zona de la cara "
+                  f"(flotantes.cara); muévelo con x, y")
+        cajas.append(caja)
+    return cajas
+
+
+def retrasos_flotantes(flotantes, est):
+    """Los que entran en el mismo segundo no saltan a la vez: cada uno escalonado_ms después del anterior."""
+    paso = est["flotantes"]["escalonado_ms"] / 1000
+    vistos, r = {}, []
+    for f in flotantes:
+        k = round(float(f["ini"]), 3)
+        r.append(vistos.get(k, 0) * paso)
+        vistos[k] = vistos.get(k, 0) + 1
+    return r
+
+
+def leer_clip(archivo, desde, dur, tam, fps):
+    """Cuadros RGB del clip, ya recortados a tam (llenan la ventana, se recorta lo que sobra)."""
+    from render import _encuadre
+    w, h = tam
+    vf = ",".join(_encuadre("", w, h, fps)) + ",format=rgb24"
+    proc = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", f"{desde:.3f}", "-t", f"{dur + 0.1:.3f}", "-an", "-i",
+                             archivo, "-vf", vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                            stdout=subprocess.PIPE)
+    n = w * h * 3
+    try:
+        while True:
+            datos = proc.stdout.read(n)
+            if len(datos) < n:
+                break
+            yield Image.frombytes("RGB", (w, h), datos)
+    finally:
+        proc.stdout.close()
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait()
+
+
+def cuadros_flotante(f, est, fps, clip, tam, retraso=0.0):
+    """Cuadros RGBA de la ventana: el clip con esquinas redondeadas, borde y sombra; pop al entrar (después de
+    `retraso` s) y desvanecido al salir. Si el clip se acaba, se queda en su último cuadro."""
+    c = est["flotantes"]
+    k = est["salida"]["ancho"] / 1080
+    w, h = tam
+    b = int(round(c["borde"] * k))
+    r = c["radio"] * k
+    wo, ho = w + 2 * b, h + 2 * b
+    margen = int(c["sombra"] * k * 2.5 + c["bajada_sombra"] * k)
+    marco = _con_sombra(mascara_redondeada(wo, ho, r), _rgba(c["color_borde"]), c["sombra"] * k,
+                        c["opacidad_sombra"], int(c["bajada_sombra"] * k), margen)
+    m_in = mascara_redondeada(w, h, max(0, r - b))
+    caja = (margen, margen, margen + wo, margen + ho)
+    dur = float(f["fin"]) - float(f["ini"])
+    ultimo = None
+    for i in range(int(round(dur * fps))):
+        tt = i / fps - retraso
+        if tt >= 0 or ultimo is None:
+            ultimo = next(clip, ultimo)
+            if ultimo is None:
+                raise ValueError(f"flotantes: el clip «{f.get('archivo')}» no dio ningún cuadro (¿desde de más?)")
+        base = marco.copy()
+        base.paste(ultimo, (margen + b, margen + b), m_in)
+        yield _lienzo_animado(base, caja, tt, dur - retraso, c)
+
+
+def preparar_flotantes(flotantes, est, carpeta):
+    """archivo ya con ruta absoluta. Devuelve sprites [{archivo, x, y, ini, fin}]."""
+    c = est["flotantes"]
+    if len(flotantes) > c["maximo"]:
+        raise ValueError(f"flotantes: como mucho {c['maximo']} ventanas (hay {len(flotantes)}); el estilo usa 2-4")
+    for f in flotantes:
+        _validar_tiempos(f, "flotantes")
+    fps = est["salida"]["fps"]
+    k = est["salida"]["ancho"] / 1080
+    cajas, retrasos = cajas_flotantes(flotantes, est), retrasos_flotantes(flotantes, est)
+    sprites = []
+    for i, (f, caja, ret) in enumerate(zip(flotantes, cajas, retrasos)):
+        w, h, b = _tam_flotante(f, est)
+        margen = int(c["sombra"] * k * 2.5 + c["bajada_sombra"] * k)
+        ox, oy = _desplazamiento_tam(w + 2 * b + 2 * margen, h + 2 * b + 2 * margen)
+        dur = float(f["fin"]) - float(f["ini"])
+        ruta = os.path.join(carpeta, f"flotante{i}.mov")
+        clip = leer_clip(f["archivo"], float(f.get("desde", 0)), dur, (w, h), fps)
+        escribir_sprite(cuadros_flotante(f, est, fps, clip, (w, h), ret), ruta, fps)
+        sprites.append({"archivo": ruta, "x": caja[0] - ox - margen, "y": caja[1] - oy - margen,
+                        "ini": float(f["ini"]), "fin": float(f["fin"])})
     return sprites

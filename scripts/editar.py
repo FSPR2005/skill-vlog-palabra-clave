@@ -13,7 +13,8 @@ guion.txt y textos.json usan la línea de tiempo del video YA editado (después 
    "claves": ["palabra", ...], "palabra_suelta": [[ini, fin]], "posiciones": [{"ini", "fin", "x", "y"}],
    "apoyos": [{"archivo", "desde", "ini", "fin"}],
    "resaltar": ["palabra", "varias palabras", {"texto", "ini", "fin"}],
-   "tarjetas": [{"tipo": "lista|insignia|mensaje|comentario", "ini", "fin", ...}]}
+   "tarjetas": [{"tipo": "lista|insignia|mensaje|comentario", "ini", "fin", ...}],
+   "flotantes": [{"archivo", "desde", "ini", "fin", "x", "y"}]}
 """
 import argparse
 import json
@@ -165,10 +166,10 @@ def _ruta_material(ruta, base_txt, que):
     return ruta
 
 
-GRAFICOS = ("tarjetas",)
+GRAFICOS = ("tarjetas", "flotantes")
 
 
-def _graficos(a, est, textos, trabajo, inicios, ad):
+def _graficos(a, est, textos, trabajo, inicios, ad, base_txt):
     """Dibuja los gráficos de textos.json (graficos.py) en <trabajo>/graficos. Devuelve sprites; en antes-despues
     solo los que empiezan con la capa de gráficos prendida."""
     carpeta = os.path.join(trabajo, "graficos")
@@ -180,6 +181,9 @@ def _graficos(a, est, textos, trabajo, inicios, ad):
     sprites = []
     if textos.get("tarjetas"):
         sprites += graficos.preparar_tarjetas(textos["tarjetas"], est, carpeta)
+    if textos.get("flotantes"):
+        fl = [dict(f, archivo=_ruta_material(f["archivo"], base_txt, "el video flotante")) for f in textos["flotantes"]]
+        sprites += graficos.preparar_flotantes(fl, est, carpeta)
     if ad:
         t0 = inicios.get("graficos")
         dentro = [x for x in sprites if t0 is not None and x["ini"] >= t0]
@@ -293,7 +297,7 @@ def render(a, est):
         zoom = {"factor": est["zoom"]["factor"],
                 "intervalos": intervalos_zoom(cortes_editados(tramos), dur_ed, est["zoom"]["periodo"])}
     sprites = []
-    for sp in _graficos(a, est, textos, trabajo, inicios, ad):
+    for sp in _graficos(a, est, textos, trabajo, inicios, ad, base_txt):
         sprites.append((entradas.count("-i"), sp["x"], sp["y"], sp["ini"], sp["fin"]))
         entradas += ["-i", sp["archivo"]]
     with open(os.path.join(trabajo, "apoyos.json"), "w", encoding="utf-8") as f:
