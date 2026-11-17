@@ -169,6 +169,10 @@ estilo no se pudo, dilo (ver límites).
 - El fondo en boceto necesita `rembg` o `mediapipe` (opcionales): sin ellos se salta con un aviso. La máscara es de un
   modelo chico: en pelo suelto, manos que se mueven rápido o un fondo del mismo color que la ropa, la orilla se ve
   recortada; revisa ese tramo en el `.mp4`.
+- Con `segmentador: "mediapipe"` explícito hace falta una versión de mediapipe que todavía traiga
+  `mp.solutions.selfie_segmentation` (las recientes ya no); si no, el boceto se salta. Usa `auto` (por omisión) o `rembg`.
+- Los números de uso (2 a 4 ventanas flotantes, una vez por video; una o dos ráfagas de estrellas; una tarjeta cada
+  5-8 s) son guías para el agente: el código solo valida los máximos de `estilo.json`.
 - No inventa tomas de apoyo: si no hay, el ritmo de cortes depende de las pausas del crudo (17 cortes/min en la prueba
   con una voz de corrido, contra 30-70 del estilo con tomas de apoyo).
 - No pone música: solo mezcla la que el usuario tenga derecho a usar (`--musica`), bajo la voz.

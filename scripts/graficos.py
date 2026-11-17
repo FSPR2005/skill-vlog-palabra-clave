@@ -685,7 +685,7 @@ def cargar_segmentador(est):
             return con_rembg
         except Exception as e:
             errores.append(f"rembg: {type(e).__name__}")
-    print("AVISO: no hay segmentador local (pip install rembg, o mediapipe) — " + "; ".join(errores)
+    print("AVISO: no hay segmentador local (pip install rembg, o mediapipe) — (" + "; ".join(errores)
           + ")")
     return None
 
