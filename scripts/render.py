@@ -39,8 +39,11 @@ def _encuadre(entrada, W, H, fps, hdr=False):
 
 
 def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=False, apoyos_hdr=(), zoom=None,
-                 marco=None):
+                 marco=None, sprites=()):
     """apoyos: [(índice de entrada ffmpeg, ini, fin)] en segundos del video editado; tapan la imagen, no la voz.
+
+    sprites: [(índice de entrada, x, y, ini, fin)]: gráficos con alfa (graficos.py) encima del color y del zoom y
+    debajo del texto; x, y es la esquina en px de la salida.
 
     zoom: {"factor", "intervalos": [(ini, fin)]}: en esos tramos la imagen va acercada (zoom en salto), bajo el texto.
     marco: {"ass", "x", "y", "w", "h", "fondo", "dur"}: modo antes-despues; el video editado se encoge a una tarjeta
@@ -72,6 +75,13 @@ def filtro_video(est, tramos, ass, fuentes, apoyos=(), color_filtro=None, hdr=Fa
         cadenas += [",".join(f) + ",split[za][zb]", f"[zb]scale={Wz}:{Hz},crop={W}:{H}[zc]",
                     f"[za][zc]overlay=0:0:enable='{expr}'[zoomed]"]
         f = ["[zoomed]null"]
+    if sprites:
+        cadenas.append(",".join(f) + "[gr0]")
+        for k, (idx, x, y, ini, fin) in enumerate(sprites):
+            cadenas.append(f"[{idx}:v]setpts=PTS-STARTPTS+{ini:.4f}/TB[sp{k}]")
+            cadenas.append(f"[gr{k}][sp{k}]overlay=x={int(x)}:y={int(y)}:eof_action=pass:"
+                           f"enable='between(t,{ini:.4f},{fin:.4f})'[gr{k + 1}]")
+        f = [f"[gr{len(sprites)}]null"]
     if ass:
         f.append(f"ass={ass}" + (f":fontsdir={fuentes}" if fuentes else ""))
     if marco:

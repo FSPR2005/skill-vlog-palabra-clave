@@ -98,6 +98,9 @@ python <skill>/scripts/revisar.py edicion/previa.mp4 --trabajo edicion --cada 0.
 Luego el render completo (sin `--hasta`, `--salida edicion/editado.mp4`), con `--musica pista.mp3` si el usuario la dio,
 y vuelve a revisar: `python <skill>/scripts/revisar.py edicion/editado.mp4 --trabajo edicion`.
 
+### 4c. Revisión final obligatoria
+Ver y OÍR el `.mp4` completo, no solo `revision.jpg`. Cotejar cada subtítulo contra el audio, en especial cifras, negaciones («no», «nunca», «sin») y nombres propios. Cada cifra o cita se coteja contra su fuente abierta. Anotar cada hallazgo con marca de tiempo. Sin esta revisión no se entrega.
+
 Opciones: `--estilo mio.json` (solo las claves que cambian de `estilo.json`; p. ej. `{"cortes": {"silencio_max": 0.5}}`
 para cortar menos, o `{"subtitulos": {"palabra": {"posicion_y": 0.25}}}` para subir la palabra en todo el video),
 `--sin-cortes` (respeta las pausas), `--palabras p.json` (usa una lista `[{"p", "ini", "fin"}]` ya hecha y no transcribe),

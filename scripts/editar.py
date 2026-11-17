@@ -12,7 +12,8 @@ guion.txt y textos.json usan la línea de tiempo del video YA editado (después 
   {"titulos": [{"chico", "grande", "ini", "fin"}], "notas": [{"texto", "ini", "fin", "posicion_x", "posicion_y"}],
    "claves": ["palabra", ...], "palabra_suelta": [[ini, fin]], "posiciones": [{"ini", "fin", "x", "y"}],
    "apoyos": [{"archivo", "desde", "ini", "fin"}],
-   "resaltar": ["palabra", "varias palabras", {"texto", "ini", "fin"}]}
+   "resaltar": ["palabra", "varias palabras", {"texto", "ini", "fin"}],
+   "tarjetas": [{"tipo": "lista|insignia|mensaje|comentario", "ini", "fin", ...}]}
 """
 import argparse
 import json
@@ -153,6 +154,41 @@ def preparar(a, est):
     return trabajo, tramos, pal_ed, hay_audio, dur
 
 
+def _ruta_material(ruta, base_txt, que):
+    """Ruta absoluta (ffmpeg corre con cwd=trabajo): relativa a la carpeta actual o, si no está ahí, a la de
+    textos.json."""
+    if not os.path.isabs(ruta) and not os.path.exists(ruta):
+        ruta = os.path.join(base_txt, ruta)
+    ruta = os.path.abspath(ruta)
+    if not os.path.exists(ruta):
+        raise SystemExit(f"no existe {que}: {ruta}")
+    return ruta
+
+
+GRAFICOS = ("tarjetas",)
+
+
+def _graficos(a, est, textos, trabajo, inicios, ad):
+    """Dibuja los gráficos de textos.json (graficos.py) en <trabajo>/graficos. Devuelve sprites; en antes-despues
+    solo los que empiezan con la capa de gráficos prendida."""
+    carpeta = os.path.join(trabajo, "graficos")
+    shutil.rmtree(carpeta, ignore_errors=True)  # sin restos de un render anterior
+    if not any(textos.get(g) for g in GRAFICOS):
+        return []
+    os.makedirs(carpeta)
+    import graficos
+    sprites = []
+    if textos.get("tarjetas"):
+        sprites += graficos.preparar_tarjetas(textos["tarjetas"], est, carpeta)
+    if ad:
+        t0 = inicios.get("graficos")
+        dentro = [x for x in sprites if t0 is not None and x["ini"] >= t0]
+        if len(dentro) < len(sprites):
+            print(f"AVISO: {len(sprites) - len(dentro)} gráfico(s) empiezan antes de la capa de gráficos y no salen")
+        sprites = dentro
+    return sprites
+
+
 def _plan_antes_despues(a, est, textos, pal_ed, dur_ed):
     """Capas con material y su segundo de entrada; avisa de las que se quitan."""
     from antes_despues import capas_con_material, tiempos_capas, inicios_por_tipo
@@ -161,7 +197,7 @@ def _plan_antes_despues(a, est, textos, pal_ed, dur_ed):
         disponibles.add("subtitulos")
     if est["color"]["activar"]:
         disponibles.add("color")
-    if textos.get("titulos") or textos.get("notas") or textos.get("apoyos"):
+    if textos.get("titulos") or textos.get("notas") or textos.get("apoyos") or any(textos.get(g) for g in GRAFICOS):
         disponibles.add("graficos")
     if a.musica:
         disponibles.add("musica")
@@ -215,12 +251,7 @@ def render(a, est):
                 continue
             if ini < t0:
                 desde, ini = desde + (t0 - ini), t0
-        ruta = ap_["archivo"]
-        if not os.path.isabs(ruta) and not os.path.exists(ruta):
-            ruta = os.path.join(base_txt, ruta)  # relativa a la carpeta de textos.json
-        ruta = os.path.abspath(ruta)  # ffmpeg corre con cwd=trabajo
-        if not os.path.exists(ruta):
-            raise SystemExit(f"no existe la toma de apoyo: {ruta}")
+        ruta = _ruta_material(ap_["archivo"], base_txt, "la toma de apoyo")
         entradas += ["-ss", str(desde), "-t", f"{fin - ini + 0.1:.3f}", "-an", "-i", ruta]
         apoyos.append((1 + bool(musica) + len(apoyos), ini, fin))
         apoyos_hdr.append(_es_hdr(ruta))
@@ -261,9 +292,14 @@ def render(a, est):
         from antes_despues import cortes_editados, intervalos_zoom
         zoom = {"factor": est["zoom"]["factor"],
                 "intervalos": intervalos_zoom(cortes_editados(tramos), dur_ed, est["zoom"]["periodo"])}
+    sprites = []
+    for sp in _graficos(a, est, textos, trabajo, inicios, ad):
+        sprites.append((entradas.count("-i"), sp["x"], sp["y"], sp["ini"], sp["fin"]))
+        entradas += ["-i", sp["archivo"]]
     with open(os.path.join(trabajo, "apoyos.json"), "w", encoding="utf-8") as f:
         json.dump([x for x in apoyos_usados if float(x["ini"]) < dur_ed], f, ensure_ascii=False, indent=0)
-    fv = filtro_video(est_v, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro, hdr, apoyos_hdr, zoom, marco)
+    fv = filtro_video(est_v, usar_tramos, "textos.ass", "fuentes", apoyos, color_filtro, hdr, apoyos_hdr, zoom, marco,
+                      sprites)
     musica_desde = inicios.get("musica") if ad else None
     if hay_audio:
         fa = filtro_audio(est, usar_tramos, hay_musica=bool(musica), musica_desde=musica_desde)
