@@ -134,3 +134,34 @@ Cómo se obtuvo: un reel público vertical de captación (47 s, 1080x1920, 30 cu
 - En la skill: `resaltar` en `textos.json` (Poppins ExtraBold 104, mayúsculas, #F5F02A con halo; o caja con
   `resaltado.modo = "fondo"`), y la regla "Gancho con cifra" del paso 3 de SKILL.md, que exige que la cifra sea
   verdadera y verificable.
+
+## 12. Tarjetas de interfaz, ventanas flotantes, fondo en boceto y estrellas (otra referencia)
+
+Cómo se obtuvo: un reel público vertical de una creadora (48 s, 1080x1920, 30 cuadros/s) que dice estar editado con IA
+en un servicio de pago en la nube. Se vieron 10 cuadros (a 540 px de ancho) en los segundos donde sale cada gráfico y
+su análisis escrito. Aquí todo se hace local y gratis con ffmpeg, Python y Pillow. No se incluye nada de él: ni
+cuadros, ni voz, ni música, ni sus marcas, logos o fuentes. Las posiciones son ±2 % (medidas a ojo sobre esos cuadros).
+
+- Medido: subtítulo de una palabra al ~22 % del alto; la cara de un plano medio entre ~32 y ~58 % (de la coronilla a la
+  barbilla) y ~30-70 % del ancho. Todos los gráficos de interfaz van DEBAJO de la barbilla, centrados a lo ancho, entre
+  el 64 y el 80 % del alto: nunca tapan la cara ni la palabra.
+- Medido, tarjetas: blancas un poco translúcidas, esquinas muy redondeadas, sombra suave. Una lista de ~64 % del ancho
+  (centro al ~72 %) con título (una palabra en caligráfica + el resto en sans negrita) y 3 renglones que se palomean de
+  uno en uno con un círculo de color; el que falta, gris. Una insignia tipo píldora oscura de ~52 % del ancho (al ~68 %)
+  con un destello y el dato del gancho. Una caja de mensaje de ~78 % del ancho (al ~68 %) con avatar redondo de
+  iniciales y una etiqueta chica de color. Una barra de comentario de ~78 % (al ~67 %) con avatar, texto y botón de
+  enviar, y una flecha que apunta hacia abajo. Entran con un pequeño rebote de escala y se van desvaneciendo. Hay 6
+  tarjetas en 48 s, separadas de 3 a 20 s (mediana ~6 s).
+- Medido, flotantes: 4 ventanas de video con esquinas redondeadas y un borde claro, a los lados de la persona (la
+  primera arriba a la izquierda, al ~40 % del alto), que aparecen juntas unos 4 s.
+- Medido, boceto: unos 3 s en que el fondo se vuelve líneas negras sobre blanco (con una cuadrícula tenue) y la
+  persona queda igual encima.
+- Medido, estrellas: al despedirse, 4-6 estrellas de 5 puntas en rosa, morado y amarillo pastel salen de la mano.
+- En la skill: `tarjetas` (lista, insignia, mensaje, comentario; `zona_y` 0.60-0.90, `pop_ms` 280 desde 0.6,
+  `salida_ms` 220; colores propios: acento lila #C86DD7, insignia ciruela #5E2750), `flotantes` (`ancho` 0.26,
+  proporción 3:4, borde blanco de 6 px, lugares a los lados a 42 y 70 % del alto, `cara` 30-70 % del ancho y 32-60 %
+  del alto, escalonadas 150 ms), `boceto` (bordes de Pillow sobre papel #FAFAF7 con cuadrícula de 60 px y la persona
+  recortada con rembg o mediapipe) y `particulas` (18 estrellas de 5 puntas en 1.2 s, rosa, lila, amarillo y azul pastel).
+- Diferencias: los gráficos son dibujos propios, no la interfaz de ninguna app; el texto de cada tarjeta lo escribe el
+  agente con lo que dice la persona. La segmentación es un modelo chico local, menos fino que el del servicio de pago.
+  Una tarjeta cada 5-8 s como mucho (la referencia, mediana ~6 s).

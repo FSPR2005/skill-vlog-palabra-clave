@@ -1,6 +1,6 @@
 ---
 name: vlog-palabra-clave
-description: Edita un video crudo (vertical u horizontal) con el estilo de vlog de estilo de vida que se ve en TikTok y Reels - cortes en salto que quitan las pausas, subtítulo de UNA palabra chica y blanca en el hueco sobre la cabeza, palabras clave grandes en color pastel con brillo suave, título de gancho en dos tipos de letra (caligráfica chica + sans negrita grande), notas escritas a mano, tomas de apoyo de 0.6-1.0 s y color luminoso con blancos suaves. Todo local y gratis (ffmpeg + faster-whisper), en Windows, Mac o Linux, con los parámetros en estilo.json. También resalta palabras dentro de la frase y hace un antes y después por capas (el crudo que se va editando, con una barra de capas de colores). Úsala cuando el usuario diga "edita este video", "edítalo estilo vlog", "ponle subtítulos palabra por palabra", "quita las pausas y ponle textos", "edítalo como TikTok de lifestyle", "edita mi unboxing / haul / vlog / reseña", "déjalo listo para Reels", "muéstrame el antes y después de la edición", o suba un video crudo pidiendo editarlo con ese estilo.
+description: Edita un video crudo (vertical u horizontal) con el estilo de vlog de estilo de vida que se ve en TikTok y Reels - cortes en salto que quitan las pausas, subtítulo de UNA palabra chica y blanca en el hueco sobre la cabeza, palabras clave grandes en color pastel con brillo suave, título de gancho en dos tipos de letra (caligráfica chica + sans negrita grande), notas escritas a mano, tomas de apoyo de 0.6-1.0 s y color luminoso con blancos suaves. Todo local y gratis (ffmpeg + faster-whisper), en Windows, Mac o Linux, con los parámetros en estilo.json. También resalta palabras dentro de la frase, hace un antes y después por capas (el crudo que se va editando, con una barra de capas de colores) y agrega gráficos de interfaz animados (lista que se palomea, insignia, mensaje con avatar, barra de «comenta PALABRA» con flecha), ventanas de video flotantes alrededor de la persona, un tramo con el fondo en boceto de líneas y una ráfaga de estrellas pastel. Úsala cuando el usuario diga "edita este video", "edítalo estilo vlog", "ponle subtítulos palabra por palabra", "quita las pausas y ponle textos", "edítalo como TikTok de lifestyle", "edita mi unboxing / haul / vlog / reseña", "déjalo listo para Reels", "muéstrame el antes y después de la edición", "ponle tarjetas / una checklist / el comenta PALABRA", "pon videos flotando alrededor de mí", "vuelve el fondo un dibujo", o suba un video crudo pidiendo editarlo con ese estilo.
 ---
 
 # Vlog con palabra clave
@@ -45,7 +45,16 @@ Si el video es largo (más de 3 min) o la máquina tiene poca RAM, trabaja por p
   "posiciones": [{"ini": 12.0, "fin": 15.5, "x": 0.5, "y": 0.85}],
   "apoyos": [{"archivo": "apoyo1.mp4", "desde": 0.0, "ini": 6.2, "fin": 6.9},
              {"archivo": "apoyo2.mp4", "desde": 3.0, "ini": 6.9, "fin": 8.0}],
-  "resaltar": ["regalos sorpresa", {"texto": "veinte", "ini": 9.0, "fin": 12.0}]
+  "resaltar": ["regalos sorpresa", {"texto": "veinte", "ini": 9.0, "fin": 12.0}],
+  "tarjetas": [{"tipo": "insignia", "texto": "✨ 100 % hecho en casa", "ini": 0.3, "fin": 2.6},
+               {"tipo": "lista", "titulo_chico": "todo", "titulo": "en una tarde",
+                "renglones": ["Guion", "Grabación", "Edición"], "ini": 5.5, "fin": 9.0},
+               {"tipo": "mensaje", "iniciales": "AB", "titulo": "PROMPT", "texto": "edita mi reel", "ini": 11.0, "fin": 13.5},
+               {"tipo": "comentario", "palabra": "GUIA", "iniciales": "AB", "ini": 17.0, "fin": 19.5}],
+  "flotantes": [{"archivo": "clip1.mp4", "desde": 0.0, "ini": 14.0, "fin": 16.5},
+                {"archivo": "clip2.mp4", "desde": 2.0, "ini": 14.0, "fin": 16.5}],
+  "boceto": [{"ini": 9.2, "fin": 11.0}],
+  "particulas": [{"x": 0.62, "y": 0.6, "t": 19.6}]
 }
 ```
 
@@ -81,6 +90,27 @@ Reglas (salen de medir el estilo, ver `recetas/ESTILO.md`):
 - **Notas a mano**: 1 o 2 en todo el video, para un aparte o una reacción ("nooo..", "mido 1.50"). Cerca del sujeto.
 - **Tomas de apoyo** (solo si el usuario las dio): cuando la voz describe algo, tapa la imagen con un clip de 0.6-1.0 s y
   encadena varios seguidos. Pon esos mismos rangos en `palabra_suelta`: ahí la palabra va a media pantalla (50 %).
+- **Tarjetas de interfaz** (`tarjetas`): refuerzan con una imagen lo que la persona DICE en ese momento; nunca dicen algo
+  que ella no dijo ni inventan cifras. Como mucho **una tarjeta cada 5-8 s** (el script avisa si dos empiezan a menos de
+  5 s) y de 2 a 4 s cada una. Tipos: `lista` (título y 2-4 `renglones` que se palomean uno por uno, parejos entre la
+  entrada y la salida; un renglón `{"texto", "en"}` se palomea en ese segundo; `titulo_chico` va en caligráfica antes
+  del título), `insignia` (píldora con `texto`, para el dato del gancho), `mensaje` (`iniciales` del avatar, `titulo`
+  chico de color y `texto`, para un prompt o un mensaje) y `comentario` (`palabra` y, si quieres, `iniciales` y
+  `texto` en lugar de «Comenta»; trae una flecha que apunta hacia abajo, para el cierre «comenta PALABRA»). ✨ y ▶ se
+  dibujan; otros emojis se quitan con un aviso. Van centradas en `x`, `y` (fracciones; por omisión las de su tipo en
+  `estilo.json`) y siempre dentro de la franja `tarjetas.zona_y` (60-90 % del alto), debajo de la cara y lejos del
+  subtítulo: si la pides más arriba, se baja con un aviso. Si en ese tramo moviste la palabra abajo con `posiciones`,
+  sube la palabra o no pongas tarjeta.
+- **Ventanas flotantes** (`flotantes`, solo con clips del usuario): 2 a 4 ventanas que salen juntas cuando la persona
+  habla de "mis videos", "lo que hice", etc., 2-3 s, máximo una vez por video. Sin `x`, `y` toman los lugares a los
+  lados de la persona (`flotantes.lugares`); las que entran en el mismo segundo se escalonan solas. No llevan audio: la
+  voz sigue. Si una tapa la cara (`flotantes.cara`), el script avisa: muévela.
+- **Fondo en boceto** (`boceto`): 1 tramo de 1.5-3 s, cuando la persona habla del fondo, del lugar o de "cómo se hizo".
+  El fondo se vuelve líneas negras sobre papel y la persona queda encima. Necesita un segmentador local: `rembg`
+  (`pip install rembg`; la primera vez baja su modelo `u2netp`, ~4.7 MB) o `mediapipe`. Sin ninguno, el render sale
+  sin boceto y con un aviso; díselo al usuario. Es lo más pesado de la skill (ver README, «Límites»).
+- **Partículas** (`particulas`): una ráfaga de estrellas pastel de 1.2 s en un punto (`x`, `y`) y segundo (`t`): un
+  beso, un "listo", la despedida. Una o dos en todo el video.
 - **Posiciones**: la palabra va en el hueco SOBRE la cabeza (por omisión 30 % desde arriba:
   `subtitulos.palabra.posicion_y` en `estilo.json`). Si en un tramo la cabeza está
   más arriba o es un plano cerrado, agrega a `posiciones` `{"ini", "fin", "x": 0.5, "y": 0.85}` para moverla en ese tramo.
@@ -94,7 +124,9 @@ python <skill>/scripts/editar.py render crudo.mp4 --trabajo edicion --textos edi
 python <skill>/scripts/revisar.py edicion/previa.mp4 --trabajo edicion --cada 0.5
 ```
 **Abre `edicion/revision.jpg` y míralo.** Corrige antes del render completo: palabra encima de la cara (baja o sube
-`posicion_y`), título tapando los ojos, textos chicos para un video horizontal recortado, color raro (mira `edicion/color.json`).
+`posicion_y`), título tapando los ojos, tarjeta o ventana flotante sobre la cara o la mano que señala, textos chicos para
+un video horizontal recortado, color raro (mira `edicion/color.json`). Los gráficos quedan en `edicion/graficos/`
+(cada uno es un `.mov` con alfa; se rehacen en cada render).
 Luego el render completo (sin `--hasta`, `--salida edicion/editado.mp4`), con `--musica pista.mp3` si el usuario la dio,
 y vuelve a revisar: `python <skill>/scripts/revisar.py edicion/editado.mp4 --trabajo edicion`.
 
@@ -116,7 +148,7 @@ python <skill>/scripts/editar.py antes-despues crudo.mp4 --trabajo edicion --tex
 El mismo clip, en una tarjeta con esquinas redondeadas sobre fondo claro y con el título "Original vs Editado", empieza
 crudo (sin color, sin texto) y se va editando por capas. Abajo corre una barra de bloques de colores bajo un cabezal
 fijo: Original (rojo), Subtítulos (amarillo; trae también el color), Zoom in y out (cian), Gráficos (naranja: títulos,
-notas y tomas de apoyo) y Música y SFX (verde: la pista de `--musica`). Cada capa se prende cuando el cabezal entra en
+notas, tomas de apoyo, tarjetas, flotantes, boceto y estrellas; los que empiezan antes de su bloque no salen) y Música y SFX (verde: la pista de `--musica`). Cada capa se prende cuando el cabezal entra en
 su bloque; los bloques que faltan se ven tenues. Todo se cambia en `antes_despues` de `estilo.json` (título, colores,
 tamaños, `capas` con `nombre`, `color`, `tipos` y, si quieres, `ini` en segundos). Por omisión las capas se reparten
 parejo en la duración. Una capa sin material (p. ej. Música sin `--musica`) se quita de la barra con un aviso. El zoom
@@ -132,7 +164,11 @@ estilo no se pudo, dilo (ver límites).
 
 ## Límites (dilo, no lo simules)
 
-- No hay efectos de cara (ojos grandes, deformaciones), stickers animados, burbujas ni destellos: son efectos de la app.
+- No hay efectos de cara (ojos grandes, deformaciones), stickers con imágenes ni burbujas de "responder comentario":
+  son efectos de la app. Las tarjetas son dibujos propios (sin logos ni marcas de nadie); las estrellas, figuras.
+- El fondo en boceto necesita `rembg` o `mediapipe` (opcionales): sin ellos se salta con un aviso. La máscara es de un
+  modelo chico: en pelo suelto, manos que se mueven rápido o un fondo del mismo color que la ropa, la orilla se ve
+  recortada; revisa ese tramo en el `.mp4`.
 - No inventa tomas de apoyo: si no hay, el ritmo de cortes depende de las pausas del crudo (17 cortes/min en la prueba
   con una voz de corrido, contra 30-70 del estilo con tomas de apoyo).
 - No pone música: solo mezcla la que el usuario tenga derecho a usar (`--musica`), bajo la voz.
