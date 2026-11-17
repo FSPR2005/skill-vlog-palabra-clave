@@ -602,7 +602,18 @@ def mezcla_boceto(t, dur, c):
     return max(0.0, min(1.0, t / tr, (dur - t) / tr))
 
 
+_papeles = {}
+
+
 def _papel(w, h, c, k):
+    clave = (w, h, c["papel"], c["cuadricula"], c["color_cuadricula"], k)
+    if clave not in _papeles:
+        _papeles.clear()
+        _papeles[clave] = _papel_nuevo(w, h, c, k)
+    return _papeles[clave]
+
+
+def _papel_nuevo(w, h, c, k):
     papel = Image.new("RGB", (w, h), _rgb(c["papel"]))
     paso = c["cuadricula"] * k
     if paso >= 3:
@@ -622,7 +633,6 @@ def _papel(w, h, c, k):
 def boceto_cuadro(img, mascara, est, mezcla=1.0):
     """El fondo de img se vuelve dibujo de líneas (bordes en negro sobre papel) y lo que marca la máscara (la
     persona, 255) queda encima tal cual. mezcla 0..1 para la transición."""
-    import numpy as np
     if mezcla <= 0:
         return img.copy()
     c = est["boceto"]
@@ -634,11 +644,10 @@ def boceto_cuadro(img, mascara, est, mezcla=1.0):
     g = max(1, int(round(c["grosor"] * k)))
     if g > 1:
         bordes = bordes.filter(ImageFilter.MaxFilter(g + 1 - g % 2))
-    e = np.asarray(bordes, dtype=np.float32)
-    tinta_a = np.clip((e - c["umbral"]) * c["contraste"], 0, 255)[..., None] / 255
-    papel = np.asarray(_papel(img.width, img.height, c, k), dtype=np.float32)
-    tinta = np.array(_rgb(c["tinta"]), dtype=np.float32)
-    fondo = Image.fromarray((papel * (1 - tinta_a) + tinta * tinta_a).astype(np.uint8), "RGB")
+    u, ct = c["umbral"], c["contraste"]
+    tinta_a = bordes.point([max(0, min(255, int((v - u) * ct))) for v in range(256)])
+    fondo = Image.composite(Image.new("RGB", img.size, _rgb(c["tinta"])), _papel(img.width, img.height, c, k),
+                            tinta_a)
     m = mascara.convert("L")
     if m.size != img.size:
         m = m.resize(img.size, Image.BILINEAR)
