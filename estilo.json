@@ -175,6 +175,22 @@
     "lugares": [[0.16, 0.42], [0.84, 0.42], [0.16, 0.7], [0.84, 0.7]],
     "cara": {"x": [0.3, 0.7], "y": [0.32, 0.6]}
   },
+  "boceto": {
+    "_nota": "Fondo en boceto (textos.json: boceto): en ese tramo el fondo se vuelve dibujo de líneas (bordes del propio cuadro en tinta sobre papel con cuadrícula) y la persona queda encima. segmentador: auto (mediapipe y si no rembg), mediapipe o rembg; los dos son opcionales y locales; sin ninguno, avisa y se salta. ancho_segmentacion: px a los que se reduce el cuadro para segmentar. umbral/contraste: cuántos bordes salen. Tamaños en px del lienzo 1080x1920.",
+    "segmentador": "auto",
+    "modelo_rembg": "u2netp",
+    "ancho_segmentacion": 320,
+    "suavizado": 1.6,
+    "umbral": 10,
+    "contraste": 5,
+    "grosor": 3,
+    "papel": "#FAFAF7",
+    "tinta": "#1E1E1E",
+    "cuadricula": 60,
+    "color_cuadricula": "#E3E6EA",
+    "borde_mascara": 3,
+    "transicion_ms": 250
+  },
   "antes_despues": {
     "_nota": "Modo antes-despues: el video va en una tarjeta y una barra de capas de colores corre bajo un cabezal fijo; cada capa se prende cuando el cabezal entra en su bloque. tipos: subtitulos, color, zoom, graficos (titulos, notas, apoyos), musica. Sin ini, las capas se reparten parejo en la duración; con ini, todas lo llevan, la primera en 0 y crecientes.",
     "fondo": "#EEEEEB",

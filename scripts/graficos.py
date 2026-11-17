@@ -4,6 +4,8 @@
   con flecha hacia abajo). Bordes muy redondeados, sombra suave, entrada con escala (pop), salida con desvanecido.
 - flotantes: 1 a 4 clips del usuario en ventanas con esquinas redondeadas y sombra alrededor de la persona; entran con
   pop (escalonados si entran juntos) y salen; sin audio: la voz principal sigue.
+- boceto: tramo donde el fondo real se vuelve dibujo de líneas (bordes del propio cuadro, en negro sobre papel) y la
+  persona queda encima. Segmentación local opcional (mediapipe o rembg); sin ella, avisa y se salta.
 
 Cada gráfico se dibuja cuadro por cuadro en un lienzo transparente chico (solo lo que ocupa, no la pantalla entera) y
 se guarda como un .mov con alfa (códec png) en <trabajo>/graficos/. render.filtro_video lo superpone en su segundo
@@ -164,7 +166,7 @@ def _con_sombra(forma, relleno_rgba, sombra, opacidad, bajada, margen):
 
 def _reducir(im):
     return im.convert("RGBa").resize((max(1, im.width // SS), max(1, im.height // SS)),
-                                     Image.LANCZOS).convert("RGBA")
+                                     Image.BOX).convert("RGBA")
 
 
 # ---------------------------------------------------------------- tarjetas
@@ -462,7 +464,7 @@ def mascara_redondeada(w, h, radio):
     """Máscara L de w x h con esquinas redondeadas (dibujada al doble y reducida: orilla suave)."""
     m = Image.new("L", (w * SS, h * SS), 0)
     ImageDraw.Draw(m).rounded_rectangle([0, 0, w * SS - 1, h * SS - 1], radius=max(0, radio) * SS, fill=255)
-    return m.resize((w, h), Image.LANCZOS)
+    return m.resize((w, h), Image.BOX)
 
 
 def _par(v):
@@ -587,3 +589,162 @@ def preparar_flotantes(flotantes, est, carpeta):
         sprites.append({"archivo": ruta, "x": caja[0] - ox - margen, "y": caja[1] - oy - margen,
                         "ini": float(f["ini"]), "fin": float(f["fin"])})
     return sprites
+
+
+# ---------------------------------------------------------------- fondo en boceto
+
+def mezcla_boceto(t, dur, c):
+    """Cuánto boceto lleva el cuadro t de un tramo de dur s: entra y sale en transicion_ms."""
+    tr = c["transicion_ms"] / 1000
+    if tr <= 0:
+        return 1.0 if 0 <= t <= dur else 0.0
+    return max(0.0, min(1.0, t / tr, (dur - t) / tr))
+
+
+def _papel(w, h, c, k):
+    papel = Image.new("RGB", (w, h), _rgb(c["papel"]))
+    paso = c["cuadricula"] * k
+    if paso >= 3:
+        d = ImageDraw.Draw(papel)
+        col = _rgb(c["color_cuadricula"])
+        x = 0.0
+        while x < w:
+            d.line([(int(x), 0), (int(x), h)], fill=col)
+            x += paso
+        y = 0.0
+        while y < h:
+            d.line([(0, int(y)), (w, int(y))], fill=col)
+            y += paso
+    return papel
+
+
+def boceto_cuadro(img, mascara, est, mezcla=1.0):
+    """El fondo de img se vuelve dibujo de líneas (bordes en negro sobre papel) y lo que marca la máscara (la
+    persona, 255) queda encima tal cual. mezcla 0..1 para la transición."""
+    import numpy as np
+    if mezcla <= 0:
+        return img.copy()
+    c = est["boceto"]
+    k = img.width / 1080
+    gris = img.convert("L")
+    if c["suavizado"] * k > 0.3:
+        gris = gris.filter(ImageFilter.GaussianBlur(c["suavizado"] * k))
+    bordes = gris.filter(ImageFilter.FIND_EDGES)
+    g = max(1, int(round(c["grosor"] * k)))
+    if g > 1:
+        bordes = bordes.filter(ImageFilter.MaxFilter(g + 1 - g % 2))
+    e = np.asarray(bordes, dtype=np.float32)
+    tinta_a = np.clip((e - c["umbral"]) * c["contraste"], 0, 255)[..., None] / 255
+    papel = np.asarray(_papel(img.width, img.height, c, k), dtype=np.float32)
+    tinta = np.array(_rgb(c["tinta"]), dtype=np.float32)
+    fondo = Image.fromarray((papel * (1 - tinta_a) + tinta * tinta_a).astype(np.uint8), "RGB")
+    m = mascara.convert("L")
+    if m.size != img.size:
+        m = m.resize(img.size, Image.BILINEAR)
+    if c["borde_mascara"] * k > 0.3:
+        m = m.filter(ImageFilter.GaussianBlur(c["borde_mascara"] * k))
+    out = Image.composite(img.convert("RGB"), fondo, m)
+    return out if mezcla >= 1 else Image.blend(img.convert("RGB"), out, mezcla)
+
+
+def cargar_segmentador(est):
+    """Función img -> máscara L de la persona, con mediapipe o rembg si están instalados (los dos son opcionales).
+    None (con aviso) si no hay ninguno: el boceto se salta y el render sigue."""
+    c = est["boceto"]
+    modo = c["segmentador"]
+    errores = []
+    if modo in ("auto", "mediapipe"):
+        try:
+            import numpy as np
+            import mediapipe as mp
+            seg = mp.solutions.selfie_segmentation.SelfieSegmentation(model_selection=1)
+
+            def con_mediapipe(img):
+                m = seg.process(np.asarray(img.convert("RGB"))).segmentation_mask
+                return Image.fromarray((np.clip(m, 0, 1) * 255).astype(np.uint8), "L")
+            return con_mediapipe
+        except Exception as e:  # sin paquete, sin modelo o API distinta: se prueba el siguiente
+            errores.append(f"mediapipe: {type(e).__name__}")
+    if modo in ("auto", "rembg"):
+        try:
+            from rembg import new_session, remove
+            sesion = new_session(c["modelo_rembg"])
+
+            def con_rembg(img):
+                return remove(img.convert("RGB"), session=sesion, only_mask=True)
+            return con_rembg
+        except Exception as e:
+            errores.append(f"rembg: {type(e).__name__}")
+    print("AVISO: no hay segmentador local (pip install rembg, o mediapipe) — " + "; ".join(errores)
+          + ")")
+    return None
+
+
+def tramos_de_intervalo(tramos, ini, fin):
+    """Los tramos del crudo que caen en [ini, fin] del editado y el segundo del editado donde empieza el primero."""
+    if not tramos:
+        return None, 0.0
+    sub, desde, acum = [], None, 0.0
+    for a, b in tramos:
+        e0, e1 = acum, acum + (b - a)
+        if e1 > ini and e0 < fin:
+            sub.append((a, b))
+            desde = e0 if desde is None else desde
+        acum = e1
+    return sub, desde or 0.0
+
+
+def preparar_boceto(bocetos, est, video, tramos, carpeta, hdr=False):
+    """Para cada {ini, fin} del editado: saca esos cuadros del crudo (mismo encuadre y cortes que el render), les
+    pone el fondo en boceto y los guarda en un .mp4 de pantalla completa que se superpone como una toma de apoyo.
+    Devuelve [{archivo, ini, fin}] ([] si no hay segmentador)."""
+    import time
+    from render import _encuadre, expresion_seleccion
+    if not bocetos:
+        return []
+    for b in bocetos:
+        _validar_tiempos(b, "boceto")
+    seg = cargar_segmentador(est)
+    if seg is None:
+        print(f"AVISO: sin segmentador se saltan {len(bocetos)} tramo(s) de fondo en boceto; el resto del render sigue")
+        return []
+    c = est["boceto"]
+    s = est["salida"]
+    W, H, fps = s["ancho"], s["alto"], s["fps"]
+    sw = min(W, int(c["ancho_segmentacion"]))
+    sh = max(2, int(round(H * sw / W)))
+    salida = []
+    for i, b in enumerate(bocetos):
+        ini, fin = float(b["ini"]), float(b["fin"])
+        sub, desde = tramos_de_intervalo(tramos, ini, fin)
+        f = _encuadre("[0:v]", W, H, fps, hdr)
+        if sub:
+            f += [f"select='{expresion_seleccion(sub, fps)}'", f"setpts=N/{fps}/TB"]
+        f += [f"trim=start={ini - desde:.4f}:end={fin - desde:.4f}", "setpts=PTS-STARTPTS", "format=rgb24"]
+        lee = subprocess.Popen(["ffmpeg", "-v", "error", "-i", video, "-filter_complex", ",".join(f) + "[v]",
+                                "-map", "[v]", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+        ruta = os.path.join(carpeta, f"boceto{i}.mp4")
+        escribe = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s",
+                                    f"{W}x{H}", "-r", str(fps), "-i", "-", "-c:v", "libx264", "-preset", "ultrafast",
+                                    "-crf", "14", "-pix_fmt", "yuv420p", ruta], stdin=subprocess.PIPE)
+        t0, n, tam = time.time(), 0, W * H * 3
+        try:
+            while True:
+                datos = lee.stdout.read(tam)
+                if len(datos) < tam:
+                    break
+                img = Image.frombytes("RGB", (W, H), datos)
+                m = seg(img.resize((sw, sh), Image.BILINEAR))
+                escribe.stdin.write(boceto_cuadro(img, m, est, mezcla_boceto(n / fps, fin - ini, c)).tobytes())
+                n += 1
+        finally:
+            lee.stdout.close()
+            lee.wait()
+            escribe.stdin.close()
+            if escribe.wait() != 0:
+                raise RuntimeError(f"ffmpeg no pudo escribir {ruta}")
+        if n == 0:
+            raise ValueError(f"boceto: no hay cuadros en {ini}-{fin} s del editado")
+        print(f"boceto {i}: {n} cuadros en {time.time() - t0:.1f} s")
+        salida.append({"archivo": ruta, "ini": ini, "fin": ini + n / fps})
+    return salida

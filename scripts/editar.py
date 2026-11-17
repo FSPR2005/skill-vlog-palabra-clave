@@ -14,7 +14,7 @@ guion.txt y textos.json usan la línea de tiempo del video YA editado (después 
    "apoyos": [{"archivo", "desde", "ini", "fin"}],
    "resaltar": ["palabra", "varias palabras", {"texto", "ini", "fin"}],
    "tarjetas": [{"tipo": "lista|insignia|mensaje|comentario", "ini", "fin", ...}],
-   "flotantes": [{"archivo", "desde", "ini", "fin", "x", "y"}]}
+   "flotantes": [{"archivo", "desde", "ini", "fin", "x", "y"}], "boceto": [{"ini", "fin"}]}
 """
 import argparse
 import json
@@ -166,19 +166,26 @@ def _ruta_material(ruta, base_txt, que):
     return ruta
 
 
-GRAFICOS = ("tarjetas", "flotantes")
+GRAFICOS = ("tarjetas", "flotantes", "boceto")
 
 
-def _graficos(a, est, textos, trabajo, inicios, ad, base_txt):
-    """Dibuja los gráficos de textos.json (graficos.py) en <trabajo>/graficos. Devuelve sprites; en antes-despues
-    solo los que empiezan con la capa de gráficos prendida."""
+def _graficos(a, est, textos, trabajo, inicios, ad, base_txt, tramos, hdr):
+    """Dibuja los gráficos de textos.json (graficos.py) en <trabajo>/graficos. Devuelve (sprites, bocetos); en
+    antes-despues solo los que empiezan con la capa de gráficos prendida."""
     carpeta = os.path.join(trabajo, "graficos")
     shutil.rmtree(carpeta, ignore_errors=True)  # sin restos de un render anterior
     if not any(textos.get(g) for g in GRAFICOS):
-        return []
+        return [], []
     os.makedirs(carpeta)
     import graficos
-    sprites = []
+    sprites, bocetos = [], list(textos.get("boceto", []))
+    if ad:
+        t0 = inicios.get("graficos")
+        dentro = [b for b in bocetos if t0 is not None and float(b.get("ini", 0)) >= t0]
+        if len(dentro) < len(bocetos):
+            print(f"AVISO: {len(bocetos) - len(dentro)} boceto(s) empiezan antes de la capa de gráficos y no salen")
+        bocetos = dentro
+    bocetos = graficos.preparar_boceto(bocetos, est, os.path.abspath(a.video), tramos, carpeta, hdr)
     if textos.get("tarjetas"):
         sprites += graficos.preparar_tarjetas(textos["tarjetas"], est, carpeta)
     if textos.get("flotantes"):
@@ -190,7 +197,7 @@ def _graficos(a, est, textos, trabajo, inicios, ad, base_txt):
         if len(dentro) < len(sprites):
             print(f"AVISO: {len(sprites) - len(dentro)} gráfico(s) empiezan antes de la capa de gráficos y no salen")
         sprites = dentro
-    return sprites
+    return sprites, bocetos
 
 
 def _plan_antes_despues(a, est, textos, pal_ed, dur_ed):
@@ -297,7 +304,12 @@ def render(a, est):
         zoom = {"factor": est["zoom"]["factor"],
                 "intervalos": intervalos_zoom(cortes_editados(tramos), dur_ed, est["zoom"]["periodo"])}
     sprites = []
-    for sp in _graficos(a, est, textos, trabajo, inicios, ad, base_txt):
+    graf, bocetos = _graficos(a, est, textos, trabajo, inicios, ad, base_txt, usar_tramos, hdr)
+    for bo in bocetos:  # pantalla completa, como una toma de apoyo (bajo el color), pero no cuenta como corte
+        apoyos.append((entradas.count("-i"), bo["ini"], bo["fin"]))
+        apoyos_hdr.append(False)
+        entradas += ["-i", bo["archivo"]]
+    for sp in graf:
         sprites.append((entradas.count("-i"), sp["x"], sp["y"], sp["ini"], sp["fin"]))
         entradas += ["-i", sp["archivo"]]
     with open(os.path.join(trabajo, "apoyos.json"), "w", encoding="utf-8") as f:
