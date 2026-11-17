@@ -191,6 +191,17 @@
     "borde_mascara": 3,
     "transicion_ms": 250
   },
+  "particulas": {
+    "_nota": "Ráfaga de estrellas (textos.json: particulas, {x, y, t}): salen del punto en abanico hacia arriba (grados), frenan, caen un poco (gravedad, fracción del radio), giran y se apagan en dur s. tamano: radio mínimo y máximo de cada estrella; radio: hasta dónde llegan. Tamaños en px del lienzo 1080x1920.",
+    "dur": 1.2,
+    "cantidad": 18,
+    "radio": 300,
+    "tamano": [14, 52],
+    "abanico": 160,
+    "gravedad": 0.25,
+    "puntas": 5,
+    "colores": ["#F7B6D2", "#C9B6F2", "#F9E79F", "#BDE6F4"]
+  },
   "antes_despues": {
     "_nota": "Modo antes-despues: el video va en una tarjeta y una barra de capas de colores corre bajo un cabezal fijo; cada capa se prende cuando el cabezal entra en su bloque. tipos: subtitulos, color, zoom, graficos (titulos, notas, apoyos), musica. Sin ini, las capas se reparten parejo en la duración; con ini, todas lo llevan, la primera en 0 y crecientes.",
     "fondo": "#EEEEEB",

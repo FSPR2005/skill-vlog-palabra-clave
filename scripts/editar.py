@@ -14,7 +14,8 @@ guion.txt y textos.json usan la línea de tiempo del video YA editado (después 
    "apoyos": [{"archivo", "desde", "ini", "fin"}],
    "resaltar": ["palabra", "varias palabras", {"texto", "ini", "fin"}],
    "tarjetas": [{"tipo": "lista|insignia|mensaje|comentario", "ini", "fin", ...}],
-   "flotantes": [{"archivo", "desde", "ini", "fin", "x", "y"}], "boceto": [{"ini", "fin"}]}
+   "flotantes": [{"archivo", "desde", "ini", "fin", "x", "y"}], "boceto": [{"ini", "fin"}],
+   "particulas": [{"x", "y", "t"}]}
 """
 import argparse
 import json
@@ -166,7 +167,7 @@ def _ruta_material(ruta, base_txt, que):
     return ruta
 
 
-GRAFICOS = ("tarjetas", "flotantes", "boceto")
+GRAFICOS = ("tarjetas", "flotantes", "boceto", "particulas")
 
 
 def _graficos(a, est, textos, trabajo, inicios, ad, base_txt, tramos, hdr):
@@ -191,6 +192,8 @@ def _graficos(a, est, textos, trabajo, inicios, ad, base_txt, tramos, hdr):
     if textos.get("flotantes"):
         fl = [dict(f, archivo=_ruta_material(f["archivo"], base_txt, "el video flotante")) for f in textos["flotantes"]]
         sprites += graficos.preparar_flotantes(fl, est, carpeta)
+    if textos.get("particulas"):
+        sprites += graficos.preparar_particulas(textos["particulas"], est, carpeta)
     if ad:
         t0 = inicios.get("graficos")
         dentro = [x for x in sprites if t0 is not None and x["ini"] >= t0]

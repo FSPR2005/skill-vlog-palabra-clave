@@ -6,6 +6,7 @@
   pop (escalonados si entran juntos) y salen; sin audio: la voz principal sigue.
 - boceto: tramo donde el fondo real se vuelve dibujo de líneas (bordes del propio cuadro, en negro sobre papel) y la
   persona queda encima. Segmentación local opcional (mediapipe o rembg); sin ella, avisa y se salta.
+- particulas: ráfaga corta de estrellas pastel que sale de un punto en un segundo dado, generada por código.
 
 Cada gráfico se dibuja cuadro por cuadro en un lienzo transparente chico (solo lo que ocupa, no la pantalla entera) y
 se guarda como un .mov con alfa (códec png) en <trabajo>/graficos/. render.filtro_video lo superpone en su segundo
@@ -748,3 +749,85 @@ def preparar_boceto(bocetos, est, video, tramos, carpeta, hdr=False):
         print(f"boceto {i}: {n} cuadros en {time.time() - t0:.1f} s")
         salida.append({"archivo": ruta, "ini": ini, "fin": ini + n / fps})
     return salida
+
+
+# ---------------------------------------------------------------- partículas
+
+def _estrellas(p, c, R):
+    import random
+    rnd = random.Random(p.get("semilla", 0))
+    ab = math.radians(c["abanico"])
+    t0, t1 = c["tamano"]
+    cols = [_rgb(x) for x in c["colores"]]
+    out = []
+    for i in range(int(p.get("cantidad", c["cantidad"]))):
+        out.append({"ang": -math.pi / 2 + rnd.uniform(-ab / 2, ab / 2),
+                    "dist": R * rnd.uniform(0.45, 0.92),
+                    "tam": rnd.uniform(t0, t1),
+                    "color": cols[i % len(cols)],
+                    "giro0": rnd.uniform(0, 2 * math.pi),
+                    "giro": rnd.uniform(-3, 3),
+                    "retraso": rnd.uniform(0, 0.12)})
+    return out
+
+
+def _componer(im, capa, x, y):
+    """alpha_composite de capa en (x, y), recortando lo que se sale del lienzo."""
+    x0, y0 = max(0, x), max(0, y)
+    x1, y1 = min(im.width, x + capa.width), min(im.height, y + capa.height)
+    if x1 > x0 and y1 > y0:
+        im.alpha_composite(capa.crop((x0 - x, y0 - y, x1 - x, y1 - y)), (x0, y0))
+
+
+def cuadros_particulas(p, est, fps):
+    """Cuadros RGBA (lienzo cuadrado de 2*radio centrado en el punto) de una ráfaga de estrellas pastel: salen del
+    punto en abanico hacia arriba, frenan, caen un poco, giran y se apagan. Determinista con `semilla`."""
+    c = est["particulas"]
+    k = est["salida"]["ancho"] / 1080
+    R = round(c["radio"] * k)
+    dur = float(p.get("dur", c["dur"]))
+    estrellas = _estrellas(p, c, R * SS)
+    lado = 2 * R * SS
+    for n in range(int(round(dur * fps))):
+        u0 = n / fps / dur
+        im = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        for e in estrellas:
+            u = (u0 - e["retraso"]) / (1 - e["retraso"])
+            if u <= 0:
+                continue
+            avance = 1 - (1 - u) ** 2.2
+            x = lado / 2 + math.cos(e["ang"]) * e["dist"] * avance
+            y = lado / 2 + math.sin(e["ang"]) * e["dist"] * avance + c["gravedad"] * R * SS * u * u
+            esc = min(1.0, u / 0.12) * (1 - 0.4 * u)
+            alfa = 1.0 if u < 0.55 else max(0.0, (1 - u) / 0.45)
+            if alfa <= 0 or esc <= 0:
+                continue
+            r = e["tam"] * k * SS * esc
+            lado_c = int(math.ceil(2 * r)) + 4
+            capa = Image.new("RGBA", (lado_c, lado_c), (0, 0, 0, 0))
+            _estrella(ImageDraw.Draw(capa), lado_c / 2, lado_c / 2, r, e["color"] + (255,),
+                      puntas=c["puntas"], interior=0.45, giro=e["giro0"] + e["giro"] * u)
+            if alfa < 1:
+                capa.putalpha(capa.getchannel("A").point(lambda v, a=alfa: int(v * a)))
+            _componer(im, capa, int(round(x - lado_c / 2)), int(round(y - lado_c / 2)))
+        yield _reducir(im)
+
+
+def preparar_particulas(particulas, est, carpeta):
+    """[{x, y, t}] (punto en fracciones y segundo del editado). Devuelve sprites [{archivo, x, y, ini, fin}]."""
+    c = est["particulas"]
+    for p in particulas:
+        if "t" not in p:
+            raise ValueError(f"particulas: cada ráfaga lleva t (segundo del video editado), x, y: {p}")
+    W, H, fps = est["salida"]["ancho"], est["salida"]["alto"], est["salida"]["fps"]
+    R = round(c["radio"] * W / 1080)
+    sprites = []
+    for i, p in enumerate(particulas):
+        ruta = os.path.join(carpeta, f"particulas{i}.mov")
+        escribir_sprite(cuadros_particulas(dict(p, semilla=p.get("semilla", i)), est, fps), ruta, fps)
+        t = float(p["t"])
+        sprites.append({"archivo": ruta, "x": round(W * float(p.get("x", 0.5))) - R,
+                        "y": round(H * float(p.get("y", 0.6))) - R, "ini": t,
+                        "fin": t + float(p.get("dur", c["dur"]))})
+    return sprites
